@@ -1,0 +1,45 @@
+# Compiled binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go build cache
+server/.gocache/
+
+# Database files
+server/data/
+*.db
+*.db-journal
+
+# Environment files
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# IDE and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Node.js (will be in front/.gitignore but also here for safety)
+front/node_modules/
+front/dist/
+
+# Test coverage
+coverage/
+*.out
+
+# Temporary files
+tmp/
+temp/

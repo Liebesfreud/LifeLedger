@@ -1,0 +1,362 @@
+openapi: 3.0.3
+info:
+  title: SubTrack API
+  version: "2.0"
+servers:
+  - url: http://localhost:8080
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: ok
+  /api/auth/register:
+    post:
+      summary: Register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthRegisterRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+  /api/auth/login:
+    post:
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthLoginRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+  /api/auth/me:
+    get:
+      summary: Current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+  /api/subscriptions:
+    get:
+      summary: List subscriptions
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create subscription
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriptionCreateRequest"
+      responses:
+        "201":
+          description: Created
+  /api/subscriptions/{id}:
+    put:
+      summary: Update subscription
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriptionUpdateRequest"
+      responses:
+        "200":
+          description: OK
+    delete:
+      summary: Delete subscription
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /api/categories:
+    get:
+      summary: List categories
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create category
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryCreateRequest"
+      responses:
+        "201":
+          description: Created
+  /api/categories/{id}:
+    put:
+      summary: Update category
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryUpdateRequest"
+      responses:
+        "200":
+          description: OK
+    delete:
+      summary: Delete category
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /api/settings:
+    get:
+      summary: Get settings
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+    put:
+      summary: Update settings / password / username
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettingsRequest"
+      responses:
+        "200":
+          description: OK
+  /api/notifications/logs:
+    get:
+      summary: List notification logs
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+  /api/data/export:
+    get:
+      summary: Export data
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+  /api/data/import:
+    post:
+      summary: Import data
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportData"
+      responses:
+        "200":
+          description: OK
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    AuthRegisterRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    AuthLoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        username:
+          type: string
+        userId:
+          type: integer
+    SubscriptionCreateRequest:
+      type: object
+      required:
+        [name, price, currency, billingCycle, nextPaymentDate, categoryId, icon, notifyDaysBefore]
+      properties:
+        name:
+          type: string
+        price:
+          type: number
+        currency:
+          type: string
+          enum: ["CNY", "USD", "EUR", "GBP", "JPY"]
+        billingCycle:
+          type: string
+          enum: ["weekly", "monthly", "quarterly", "yearly"]
+        nextPaymentDate:
+          type: string
+          format: date-time
+        categoryId:
+          type: string
+        icon:
+          type: string
+        description:
+          type: string
+        notifyDaysBefore:
+          type: integer
+        autoRenew:
+          type: boolean
+    SubscriptionUpdateRequest:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        price:
+          type: number
+        currency:
+          type: string
+        billingCycle:
+          type: string
+        nextPaymentDate:
+          type: string
+          format: date-time
+        categoryId:
+          type: string
+        icon:
+          type: string
+        description:
+          type: string
+        notifyDaysBefore:
+          type: integer
+        autoRenew:
+          type: boolean
+    CategoryCreateRequest:
+      type: object
+      required: [name, color]
+      properties:
+        name:
+          type: string
+        color:
+          type: string
+    CategoryUpdateRequest:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        color:
+          type: string
+    SettingsRequest:
+      type: object
+      properties:
+        themeColor:
+          type: string
+        darkMode:
+          type: boolean
+        language:
+          type: string
+          enum: [zh, en]
+        telegramBotToken:
+          type: string
+        telegramChatId:
+          type: string
+        notificationStyle:
+          type: string
+          enum: [simple, detailed]
+        defaultNotifyDays:
+          type: integer
+        currencyRates:
+          type: object
+          additionalProperties:
+            type: number
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+        newUsername:
+          type: string
+    ImportData:
+      type: object
+      properties:
+        settings:
+          type: object
+        subscriptions:
+          type: array
+          items:
+            type: object
+        categories:
+          type: array
+          items:
+            type: object
+        notificationLogs:
+          type: array
+          items:
+            type: object
