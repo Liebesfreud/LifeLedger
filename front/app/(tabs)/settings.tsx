@@ -9,16 +9,23 @@ import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { exportSnapshot, importSnapshot } from '@/lib/db';
 import { useAppStore } from '@/store/app-store';
-import type { Currency } from '@/types/domain';
+import type { Category, Currency } from '@/types/domain';
 
 const currencies: Currency[] = ['CNY', 'USD', 'EUR', 'GBP', 'JPY'];
+const categoryColors = ['#2563EB', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444'];
 
 export default function SettingsScreen() {
   const settings = useAppStore((state) => state.settings);
+  const categories = useAppStore((state) => state.categories);
   const updateSettings = useAppStore((state) => state.updateSettings);
   const initialize = useAppStore((state) => state.initialize);
+  const addCategory = useAppStore((state) => state.addCategory);
+  const removeCategory = useAppStore((state) => state.removeCategory);
   const [budget, setBudget] = useState(String(settings.monthlyBudget));
   const [idleDays, setIdleDays] = useState(String(settings.itemIdleAlertDays));
+  const [categoryName, setCategoryName] = useState('');
+  const [categoryModule, setCategoryModule] = useState<Category['module']>('subscription');
+  const [categoryColor, setCategoryColor] = useState(categoryColors[0]);
 
   const save = async () => {
     await updateSettings({
@@ -45,12 +52,24 @@ export default function SettingsScreen() {
   };
 
   const importData = async () => {
-    const result = await DocumentPicker.getDocumentAsync({ type: 'application/json' });
-    if (result.canceled || !result.assets[0]) return;
-    const text = await FileSystem.readAsStringAsync(result.assets[0].uri);
-    await importSnapshot(JSON.parse(text));
-    await initialize();
-    Alert.alert('导入完成', '数据已合并到本地数据库。');
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: 'application/json' });
+      if (result.canceled || !result.assets[0]) return;
+      const text = await FileSystem.readAsStringAsync(result.assets[0].uri);
+      const payload = JSON.parse(text);
+      if (!payload || typeof payload !== 'object') throw new Error('invalid json');
+      await importSnapshot(payload);
+      await initialize();
+      Alert.alert('导入完成', '数据已合并到本地数据库。');
+    } catch {
+      Alert.alert('导入失败', '请选择由 SubTrack 导出的有效 JSON 文件。');
+    }
+  };
+
+  const createCategory = async () => {
+    if (!categoryName.trim()) return Alert.alert('请填写分类名称');
+    await addCategory({ name: categoryName.trim(), module: categoryModule, color: categoryColor });
+    setCategoryName('');
   };
 
   return (
@@ -77,6 +96,46 @@ export default function SettingsScreen() {
           <Switch value={settings.notificationEnabled} onValueChange={toggleNotifications} />
         </View>
         <Button onPress={save}>保存设置</Button>
+      </Card>
+
+      <Card className="mb-4 gap-3">
+        <Text className="text-lg font-black text-slate-950">分类管理</Text>
+        <Input placeholder="分类名称，例如 AI 工具 / 厨房用品" value={categoryName} onChangeText={setCategoryName} />
+        <View className="flex-row gap-2">
+          <Button className="flex-1" size="sm" variant={categoryModule === 'subscription' ? 'default' : 'secondary'} onPress={() => setCategoryModule('subscription')}>订阅分类</Button>
+          <Button className="flex-1" size="sm" variant={categoryModule === 'item' ? 'default' : 'secondary'} onPress={() => setCategoryModule('item')}>物品分类</Button>
+        </View>
+        <View className="flex-row flex-wrap gap-2">
+          {categoryColors.map((color) => (
+            <Button key={color} size="sm" variant={categoryColor === color ? 'default' : 'secondary'} onPress={() => setCategoryColor(color)}>
+              {color}
+            </Button>
+          ))}
+        </View>
+        <Button onPress={createCategory}>新增分类</Button>
+        {(['subscription', 'item'] as const).map((module) => (
+          <View key={module} className="gap-2">
+            <Text className="font-semibold text-slate-700">{module === 'subscription' ? '订阅分类' : '物品分类'}</Text>
+            {categories.filter((category) => category.module === module).map((category) => (
+              <View key={category.id} className="flex-row items-center justify-between rounded-2xl bg-slate-50 p-3">
+                <View className="flex-row items-center gap-2">
+                  <View className="h-3 w-3 rounded-full" style={{ backgroundColor: category.color }} />
+                  <Text className="font-bold text-slate-900">{category.name}</Text>
+                </View>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onPress={() => Alert.alert('删除分类', `删除 ${category.name} 后，关联数据会变为未分类。`, [
+                    { text: '取消', style: 'cancel' },
+                    { text: '删除', style: 'destructive', onPress: () => removeCategory(category.id) },
+                  ])}
+                >
+                  删除
+                </Button>
+              </View>
+            ))}
+          </View>
+        ))}
       </Card>
 
       <Card className="gap-3">

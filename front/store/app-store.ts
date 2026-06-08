@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { AppSettings, Category, Item, Subscription } from '@/types/domain';
 import { annualCost, createId, daysUntil, monthlyCost, todayISO } from '@/lib/utils';
 import * as repo from '@/lib/db';
+import { syncLocalReminders } from '@/lib/notifications';
 
 type AppState = {
   ready: boolean;
@@ -17,6 +18,8 @@ type AppState = {
   updateItem: (item: Item) => Promise<void>;
   removeItem: (id: string) => Promise<void>;
   markUsed: (item: Item) => Promise<void>;
+  addCategory: (input: Pick<Category, 'name' | 'color' | 'module'>) => Promise<void>;
+  removeCategory: (id: string) => Promise<void>;
   updateSettings: (settings: AppSettings) => Promise<void>;
 };
 
@@ -35,6 +38,7 @@ async function refresh(set: (state: Partial<AppState>) => void) {
     repo.getSettings(),
   ]);
   set({ categories, subscriptions, items, settings, ready: true });
+  await syncLocalReminders(subscriptions, items, settings).catch((error) => console.warn('Reminder sync skipped', error));
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -73,6 +77,14 @@ export const useAppStore = create<AppState>((set) => ({
   },
   markUsed: async (item) => {
     await repo.markItemUsed(item);
+    await refresh(set);
+  },
+  addCategory: async (input) => {
+    await repo.upsertCategory({ ...input, id: createId('cat'), createdAt: new Date().toISOString() });
+    await refresh(set);
+  },
+  removeCategory: async (id) => {
+    await repo.deleteCategory(id);
     await refresh(set);
   },
   updateSettings: async (settings) => {

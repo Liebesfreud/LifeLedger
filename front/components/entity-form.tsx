@@ -1,90 +1,186 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import type { BillingCycle, Currency, ItemCondition } from '@/types/domain';
+import type { BillingCycle, Category, Currency, Item, ItemCondition, Subscription } from '@/types/domain';
 
 const currencies: Currency[] = ['CNY', 'USD', 'EUR', 'GBP', 'JPY'];
 const cycles: BillingCycle[] = ['monthly', 'yearly', 'quarterly', 'weekly'];
 const conditions: ItemCondition[] = ['new', 'good', 'used', 'idle', 'retired'];
 
-function ChoiceRow<T extends string>({ values, value, onChange }: { values: T[]; value: T; onChange: (value: T) => void }) {
+type SubscriptionInput = Omit<Subscription, 'id' | 'createdAt'>;
+type ItemInput = Omit<Item, 'id' | 'createdAt'>;
+
+function ChoiceRow<T extends string>({ values, value, onChange, labels }: { values: T[]; value?: T; onChange: (value: T) => void; labels?: Partial<Record<T, string>> }) {
   return (
     <View className="flex-row flex-wrap gap-2">
       {values.map((item) => (
         <Button key={item} size="sm" variant={item === value ? 'default' : 'secondary'} onPress={() => onChange(item)}>
-          {item}
+          {labels?.[item] ?? item}
         </Button>
       ))}
     </View>
   );
 }
 
-export function SubscriptionForm({ onSubmit }: { onSubmit: (input: { name: string; price: number; currency: Currency; billingCycle: BillingCycle; nextPaymentDate: string; notifyDaysBefore: number; icon: string; autoRenew: boolean }) => Promise<void> }) {
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
-  const [currency, setCurrency] = useState<Currency>('CNY');
-  const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
-  const [nextPaymentDate, setNextPaymentDate] = useState(new Date().toISOString().slice(0, 10));
-  const [notifyDaysBefore, setNotifyDaysBefore] = useState('3');
-  const [icon, setIcon] = useState('💳');
+function CategoryChoice({ categories, value, onChange }: { categories: Category[]; value?: string; onChange: (value?: string) => void }) {
+  return (
+    <View className="flex-row flex-wrap gap-2">
+      <Button size="sm" variant={!value ? 'default' : 'secondary'} onPress={() => onChange(undefined)}>
+        未分类
+      </Button>
+      {categories.map((category) => (
+        <Button key={category.id} size="sm" variant={category.id === value ? 'default' : 'secondary'} onPress={() => onChange(category.id)}>
+          {category.name}
+        </Button>
+      ))}
+    </View>
+  );
+}
+
+export function SubscriptionForm({
+  categories,
+  initialValue,
+  onCancel,
+  onSubmit,
+}: {
+  categories: Category[];
+  initialValue?: Subscription;
+  onCancel?: () => void;
+  onSubmit: (input: SubscriptionInput) => Promise<void>;
+}) {
+  const [name, setName] = useState(initialValue?.name ?? '');
+  const [price, setPrice] = useState(initialValue ? String(initialValue.price) : '');
+  const [currency, setCurrency] = useState<Currency>(initialValue?.currency ?? 'CNY');
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>(initialValue?.billingCycle ?? 'monthly');
+  const [nextPaymentDate, setNextPaymentDate] = useState(initialValue?.nextPaymentDate ?? new Date().toISOString().slice(0, 10));
+  const [notifyDaysBefore, setNotifyDaysBefore] = useState(String(initialValue?.notifyDaysBefore ?? 3));
+  const [icon, setIcon] = useState(initialValue?.icon ?? '💳');
+  const [categoryId, setCategoryId] = useState<string | undefined>(initialValue?.categoryId);
+
+  useEffect(() => {
+    if (!initialValue) return;
+    setName(initialValue.name);
+    setPrice(String(initialValue.price));
+    setCurrency(initialValue.currency);
+    setBillingCycle(initialValue.billingCycle);
+    setNextPaymentDate(initialValue.nextPaymentDate);
+    setNotifyDaysBefore(String(initialValue.notifyDaysBefore));
+    setIcon(initialValue.icon ?? '💳');
+    setCategoryId(initialValue.categoryId);
+  }, [initialValue]);
 
   const submit = async () => {
     if (!name.trim()) return Alert.alert('请填写订阅名称');
     const parsedPrice = Number(price);
     if (!Number.isFinite(parsedPrice) || parsedPrice < 0) return Alert.alert('请填写有效价格');
-    await onSubmit({ name: name.trim(), price: parsedPrice, currency, billingCycle, nextPaymentDate, notifyDaysBefore: Number(notifyDaysBefore) || 0, icon, autoRenew: true });
-    setName('');
-    setPrice('');
+    await onSubmit({ name: name.trim(), price: parsedPrice, currency, billingCycle, nextPaymentDate, categoryId, notifyDaysBefore: Number(notifyDaysBefore) || 0, icon, autoRenew: true });
+    if (!initialValue) {
+      setName('');
+      setPrice('');
+    }
   };
 
   return (
     <Card className="mb-4 gap-3">
-      <Text className="text-lg font-black text-slate-950">新增订阅</Text>
+      <Text className="text-lg font-black text-slate-950">{initialValue ? '编辑订阅' : '新增订阅'}</Text>
       <Input placeholder="名称，例如 ChatGPT" value={name} onChangeText={setName} />
       <View className="flex-row gap-3">
         <Input className="flex-1" placeholder="价格" keyboardType="decimal-pad" value={price} onChangeText={setPrice} />
         <Input className="w-20" placeholder="图标" value={icon} onChangeText={setIcon} />
       </View>
       <ChoiceRow values={currencies} value={currency} onChange={setCurrency} />
-      <ChoiceRow values={cycles} value={billingCycle} onChange={setBillingCycle} />
+      <ChoiceRow values={cycles} value={billingCycle} onChange={setBillingCycle} labels={{ monthly: '每月', yearly: '每年', quarterly: '每季', weekly: '每周' }} />
+      <Text className="font-semibold text-slate-700">分类</Text>
+      <CategoryChoice categories={categories} value={categoryId} onChange={setCategoryId} />
       <Input placeholder="下次付款日期 YYYY-MM-DD" value={nextPaymentDate} onChangeText={setNextPaymentDate} />
       <Input placeholder="提前提醒天数" keyboardType="number-pad" value={notifyDaysBefore} onChangeText={setNotifyDaysBefore} />
-      <Button onPress={submit}>保存订阅</Button>
+      <View className="flex-row gap-3">
+        {onCancel ? <Button className="flex-1" variant="secondary" onPress={onCancel}>取消</Button> : null}
+        <Button className="flex-1" onPress={submit}>{initialValue ? '保存修改' : '保存订阅'}</Button>
+      </View>
     </Card>
   );
 }
 
-export function ItemForm({ onSubmit, defaultIdleDays }: { defaultIdleDays: number; onSubmit: (input: { name: string; purchasePrice: number; currency: Currency; purchaseDate: string; location: string; condition: ItemCondition; idleAlertDays: number }) => Promise<void> }) {
-  const [name, setName] = useState('');
-  const [purchasePrice, setPurchasePrice] = useState('');
-  const [currency, setCurrency] = useState<Currency>('CNY');
-  const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().slice(0, 10));
-  const [location, setLocation] = useState('家里');
-  const [condition, setCondition] = useState<ItemCondition>('good');
-  const [idleAlertDays, setIdleAlertDays] = useState(String(defaultIdleDays));
+export function ItemForm({
+  categories,
+  defaultIdleDays,
+  initialValue,
+  onCancel,
+  onSubmit,
+}: {
+  categories: Category[];
+  defaultIdleDays: number;
+  initialValue?: Item;
+  onCancel?: () => void;
+  onSubmit: (input: ItemInput) => Promise<void>;
+}) {
+  const [name, setName] = useState(initialValue?.name ?? '');
+  const [purchasePrice, setPurchasePrice] = useState(initialValue ? String(initialValue.purchasePrice) : '');
+  const [currency, setCurrency] = useState<Currency>(initialValue?.currency ?? 'CNY');
+  const [purchaseDate, setPurchaseDate] = useState(initialValue?.purchaseDate ?? new Date().toISOString().slice(0, 10));
+  const [location, setLocation] = useState(initialValue?.location ?? '家里');
+  const [condition, setCondition] = useState<ItemCondition>(initialValue?.condition ?? 'good');
+  const [idleAlertDays, setIdleAlertDays] = useState(String(initialValue?.idleAlertDays ?? defaultIdleDays));
+  const [categoryId, setCategoryId] = useState<string | undefined>(initialValue?.categoryId);
+  const [note, setNote] = useState(initialValue?.note ?? '');
+
+  useEffect(() => {
+    if (!initialValue) return;
+    setName(initialValue.name);
+    setPurchasePrice(String(initialValue.purchasePrice));
+    setCurrency(initialValue.currency);
+    setPurchaseDate(initialValue.purchaseDate);
+    setLocation(initialValue.location);
+    setCondition(initialValue.condition);
+    setIdleAlertDays(String(initialValue.idleAlertDays));
+    setCategoryId(initialValue.categoryId);
+    setNote(initialValue.note ?? '');
+  }, [initialValue]);
 
   const submit = async () => {
     if (!name.trim()) return Alert.alert('请填写物品名称');
     const parsedPrice = Number(purchasePrice);
     if (!Number.isFinite(parsedPrice) || parsedPrice < 0) return Alert.alert('请填写有效购入价');
-    await onSubmit({ name: name.trim(), purchasePrice: parsedPrice, currency, purchaseDate, location, condition, idleAlertDays: Number(idleAlertDays) || defaultIdleDays });
-    setName('');
-    setPurchasePrice('');
+    await onSubmit({
+      name: name.trim(),
+      purchasePrice: parsedPrice,
+      currency,
+      purchaseDate,
+      categoryId,
+      location,
+      condition,
+      usageCount: initialValue?.usageCount ?? 0,
+      lastUsedAt: initialValue?.lastUsedAt,
+      idleAlertDays: Number(idleAlertDays) || defaultIdleDays,
+      note: note.trim() || undefined,
+    });
+    if (!initialValue) {
+      setName('');
+      setPurchasePrice('');
+      setNote('');
+    }
   };
 
   return (
     <Card className="mb-4 gap-3">
-      <Text className="text-lg font-black text-slate-950">新增物品</Text>
+      <Text className="text-lg font-black text-slate-950">{initialValue ? '编辑物品' : '新增物品'}</Text>
       <Input placeholder="名称，例如 Kindle" value={name} onChangeText={setName} />
       <Input placeholder="购入价" keyboardType="decimal-pad" value={purchasePrice} onChangeText={setPurchasePrice} />
       <ChoiceRow values={currencies} value={currency} onChange={setCurrency} />
-      <ChoiceRow values={conditions} value={condition} onChange={setCondition} />
+      <ChoiceRow values={conditions} value={condition} onChange={setCondition} labels={{ new: '全新', good: '良好', used: '常用', idle: '闲置', retired: '退役' }} />
+      <Text className="font-semibold text-slate-700">分类</Text>
+      <CategoryChoice categories={categories} value={categoryId} onChange={setCategoryId} />
       <Input placeholder="购入日期 YYYY-MM-DD" value={purchaseDate} onChangeText={setPurchaseDate} />
       <Input placeholder="存放位置" value={location} onChangeText={setLocation} />
       <Input placeholder="闲置提醒天数" keyboardType="number-pad" value={idleAlertDays} onChangeText={setIdleAlertDays} />
-      <Button onPress={submit}>保存物品</Button>
+      <Input placeholder="备注，例如保修期/序列号/购买理由" value={note} onChangeText={setNote} />
+      <View className="flex-row gap-3">
+        {onCancel ? <Button className="flex-1" variant="secondary" onPress={onCancel}>取消</Button> : null}
+        <Button className="flex-1" onPress={submit}>{initialValue ? '保存修改' : '保存物品'}</Button>
+      </View>
     </Card>
   );
 }

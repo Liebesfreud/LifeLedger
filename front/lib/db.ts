@@ -102,6 +102,13 @@ export async function upsertCategory(category: Category) {
   );
 }
 
+export async function deleteCategory(id: string) {
+  const db = await getDb();
+  await db.runAsync('UPDATE subscriptions SET categoryId = NULL WHERE categoryId = ?', [id]);
+  await db.runAsync('UPDATE items SET categoryId = NULL WHERE categoryId = ?', [id]);
+  await db.runAsync('DELETE FROM categories WHERE id = ?', [id]);
+}
+
 export async function listSubscriptions() {
   const db = await getDb();
   const rows = await db.getAllAsync<Omit<Subscription, 'autoRenew'> & { autoRenew: number }>('SELECT * FROM subscriptions ORDER BY nextPaymentDate ASC');
