@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Pill } from '@/components/ui/screen';
+import { EmptyState, Sheet } from '@/components/ui/sheet';
 import { SubscriptionForm } from '@/components/entity-form';
 import { cycleLabel, daysUntil, money, monthlyCost } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
@@ -27,6 +28,7 @@ export default function SubscriptionsScreen() {
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | undefined>();
   const [editing, setEditing] = useState<Subscription | undefined>();
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   const categoryMap = useMemo(() => new Map(categories.map((category) => [category.id, category.name])), [categories]);
   const renewalMap = useMemo(() => {
@@ -55,7 +57,28 @@ export default function SubscriptionsScreen() {
     if (!editing) return;
     await updateSubscription({ ...editing, ...input });
     setEditing(undefined);
+    setIsFormOpen(false);
   }, [editing, updateSubscription]);
+
+  const submitCreating = useCallback(async (input: Omit<Subscription, 'id' | 'createdAt'>) => {
+    await addSubscription(input);
+    setIsFormOpen(false);
+  }, [addSubscription]);
+
+  const openCreateForm = useCallback(() => {
+    setEditing(undefined);
+    setIsFormOpen(true);
+  }, []);
+
+  const openEditForm = useCallback((subscription: Subscription) => {
+    setEditing(subscription);
+    setIsFormOpen(true);
+  }, []);
+
+  const closeForm = useCallback(() => {
+    setEditing(undefined);
+    setIsFormOpen(false);
+  }, []);
 
   const renderSubscription = useCallback(({ item: sub }: { item: Subscription }) => {
     const days = daysUntil(sub.nextPaymentDate);
@@ -78,7 +101,7 @@ export default function SubscriptionsScreen() {
         <Text className="mt-2 text-sm text-slate-400">付款方式：{sub.paymentMethod || '未记录'}{recentRenewals ? ` · 最近续费 ${recentRenewals}` : ''}</Text>
         <View className="mt-4 flex-row gap-2">
           <Button size="sm" variant="default" onPress={() => renewSubscription(sub)}>已续费</Button>
-          <Button size="sm" variant="secondary" onPress={() => setEditing(sub)}>编辑</Button>
+          <Button size="sm" variant="secondary" onPress={() => openEditForm(sub)}>编辑</Button>
           <Button
             size="sm"
             variant="destructive"
@@ -92,24 +115,19 @@ export default function SubscriptionsScreen() {
         </View>
       </Card>
     );
-  }, [categoryName, removeSubscription, renewalMap, renewSubscription]);
+  }, [categoryName, openEditForm, removeSubscription, renewalMap, renewSubscription]);
 
   const listHeader = useMemo(() => (
     <View>
       <View className="mb-5">
-        <Text className="text-3xl font-black text-slate-950">订阅管理</Text>
-        <Text className="mt-1 text-base text-slate-500">筛选结果 {filteredSubscriptions.length} 项 · 月支出 {money(totalMonthly)}</Text>
+        <View className="flex-row items-start justify-between gap-3">
+          <View className="flex-1">
+            <Text className="text-3xl font-black text-slate-950">订阅管理</Text>
+            <Text className="mt-1 text-base text-slate-500">筛选结果 {filteredSubscriptions.length} 项 · 月支出 {money(totalMonthly)}</Text>
+          </View>
+          <Button size="sm" onPress={openCreateForm}>新增</Button>
+        </View>
       </View>
-      {editing ? (
-        <SubscriptionForm
-          categories={categories}
-          initialValue={editing}
-          onCancel={() => setEditing(undefined)}
-          onSubmit={submitEditing}
-        />
-      ) : (
-        <SubscriptionForm categories={categories} onSubmit={addSubscription} />
-      )}
       <Card className="mb-4 gap-3">
         <Input placeholder="搜索订阅名称或备注" value={query} onChangeText={setQuery} />
         <View className="flex-row flex-wrap gap-2">
@@ -122,7 +140,7 @@ export default function SubscriptionsScreen() {
         </View>
       </Card>
     </View>
-  ), [addSubscription, categories, categoryFilter, editing, filteredSubscriptions.length, query, submitEditing, totalMonthly]);
+  ), [categories, categoryFilter, filteredSubscriptions.length, openCreateForm, query, totalMonthly]);
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
@@ -136,8 +154,21 @@ export default function SubscriptionsScreen() {
         maxToRenderPerBatch={8}
         windowSize={7}
         ListHeaderComponent={listHeader}
-        ListEmptyComponent={<Text className="text-center text-slate-500">没有匹配的订阅，调整筛选或新增一个。</Text>}
+        ListEmptyComponent={<EmptyState title="没有匹配的订阅" description="调整筛选条件，或点击右上角新增第一个长期扣款。" />}
       />
+      <Sheet
+        visible={isFormOpen}
+        title={editing ? '编辑订阅' : '新增订阅'}
+        subtitle="记录支出周期、付款方式和续费提醒。"
+        onClose={closeForm}
+      >
+        <SubscriptionForm
+          categories={categories}
+          initialValue={editing}
+          onCancel={closeForm}
+          onSubmit={editing ? submitEditing : submitCreating}
+        />
+      </Sheet>
     </SafeAreaView>
   );
 }

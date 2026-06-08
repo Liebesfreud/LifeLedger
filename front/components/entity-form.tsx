@@ -95,7 +95,7 @@ export function SubscriptionForm({
   };
 
   return (
-    <Card className="mb-4 gap-3">
+    <Card className="gap-3">
       <Text className="text-lg font-black text-slate-950">{initialValue ? '编辑订阅' : '新增订阅'}</Text>
       <Input placeholder="名称，例如 ChatGPT" value={name} onChangeText={setName} />
       <View className="flex-row gap-3">
@@ -211,7 +211,7 @@ export function ItemForm({
   };
 
   return (
-    <Card className="mb-4 gap-3">
+    <Card className="gap-3">
       <Text className="text-lg font-black text-slate-950">{initialValue ? '编辑物品' : '新增物品'}</Text>
       <Input placeholder="名称，例如 Kindle" value={name} onChangeText={setName} />
       <Input placeholder="购入价" keyboardType="decimal-pad" value={purchasePrice} onChangeText={setPurchasePrice} />

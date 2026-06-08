@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ItemForm } from '@/components/entity-form';
 import { Pill } from '@/components/ui/screen';
+import { EmptyState, Sheet } from '@/components/ui/sheet';
 import { daysUntil, money } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
 import type { Item } from '@/types/domain';
@@ -24,6 +25,7 @@ export default function ItemsScreen() {
   const [onlyIdle, setOnlyIdle] = useState(false);
   const [editing, setEditing] = useState<Item | undefined>();
   const [expandedItemId, setExpandedItemId] = useState<string | undefined>();
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   const categoryMap = useMemo(() => new Map(categories.map((category) => [category.id, category.name])), [categories]);
   const usageTextMap = useMemo(() => {
@@ -65,7 +67,28 @@ export default function ItemsScreen() {
     if (!editing) return;
     await updateItem({ ...editing, ...input });
     setEditing(undefined);
+    setIsFormOpen(false);
   }, [editing, updateItem]);
+
+  const submitCreating = useCallback(async (input: Omit<Item, 'id' | 'createdAt'>) => {
+    await addItem(input);
+    setIsFormOpen(false);
+  }, [addItem]);
+
+  const openCreateForm = useCallback(() => {
+    setEditing(undefined);
+    setIsFormOpen(true);
+  }, []);
+
+  const openEditForm = useCallback((item: Item) => {
+    setEditing(item);
+    setIsFormOpen(true);
+  }, []);
+
+  const closeForm = useCallback(() => {
+    setEditing(undefined);
+    setIsFormOpen(false);
+  }, []);
 
   const renderItem = useCallback(({ item }: { item: Item }) => {
     const reference = item.lastUsedAt || item.purchaseDate;
@@ -109,7 +132,7 @@ export default function ItemsScreen() {
         <View className="mt-4 flex-row gap-2">
           <Button size="sm" variant="secondary" onPress={() => markUsed(item)}>记录使用</Button>
           <Button size="sm" variant="secondary" onPress={() => setExpandedItemId((value) => value === item.id ? undefined : item.id)}>{isExpanded ? '收起' : '详情'}</Button>
-          <Button size="sm" variant="secondary" onPress={() => setEditing(item)}>编辑</Button>
+          <Button size="sm" variant="secondary" onPress={() => openEditForm(item)}>编辑</Button>
           <Button
             size="sm"
             variant="destructive"
@@ -123,25 +146,19 @@ export default function ItemsScreen() {
         </View>
       </Card>
     );
-  }, [categoryName, expandedItemId, markUsed, recentUsageText, removeItem, usageLogsByItem]);
+  }, [categoryName, expandedItemId, markUsed, openEditForm, recentUsageText, removeItem, usageLogsByItem]);
 
   const listHeader = useMemo(() => (
     <View>
       <View className="mb-5">
-        <Text className="text-3xl font-black text-slate-950">物品管理</Text>
-        <Text className="mt-1 text-base text-slate-500">筛选结果 {filteredItems.length} 件 · 总投入 {money(totalValue)}</Text>
+        <View className="flex-row items-start justify-between gap-3">
+          <View className="flex-1">
+            <Text className="text-3xl font-black text-slate-950">物品管理</Text>
+            <Text className="mt-1 text-base text-slate-500">筛选结果 {filteredItems.length} 件 · 总投入 {money(totalValue)}</Text>
+          </View>
+          <Button size="sm" onPress={openCreateForm}>新增</Button>
+        </View>
       </View>
-      {editing ? (
-        <ItemForm
-          categories={categories}
-          defaultIdleDays={settings.itemIdleAlertDays}
-          initialValue={editing}
-          onCancel={() => setEditing(undefined)}
-          onSubmit={submitEditing}
-        />
-      ) : (
-        <ItemForm categories={categories} defaultIdleDays={settings.itemIdleAlertDays} onSubmit={addItem} />
-      )}
       <Card className="mb-4 gap-3">
         <Input placeholder="搜索物品、位置或备注" value={query} onChangeText={setQuery} />
         <View className="flex-row flex-wrap gap-2">
@@ -155,7 +172,7 @@ export default function ItemsScreen() {
         </View>
       </Card>
     </View>
-  ), [addItem, categories, categoryFilter, editing, filteredItems.length, onlyIdle, query, settings.itemIdleAlertDays, submitEditing, totalValue]);
+  ), [categories, categoryFilter, filteredItems.length, onlyIdle, openCreateForm, query, totalValue]);
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
@@ -169,8 +186,22 @@ export default function ItemsScreen() {
         maxToRenderPerBatch={8}
         windowSize={7}
         ListHeaderComponent={listHeader}
-        ListEmptyComponent={<Text className="text-center text-slate-500">没有匹配的物品，调整筛选或新增一件。</Text>}
+        ListEmptyComponent={<EmptyState title="没有匹配的物品" description="调整筛选条件，或点击右上角新增一件需要长期追踪的物品。" />}
       />
+      <Sheet
+        visible={isFormOpen}
+        title={editing ? '编辑物品' : '新增物品'}
+        subtitle="记录价格、位置、照片、保修和真实使用成本。"
+        onClose={closeForm}
+      >
+        <ItemForm
+          categories={categories}
+          defaultIdleDays={settings.itemIdleAlertDays}
+          initialValue={editing}
+          onCancel={closeForm}
+          onSubmit={editing ? submitEditing : submitCreating}
+        />
+      </Sheet>
     </SafeAreaView>
   );
 }
