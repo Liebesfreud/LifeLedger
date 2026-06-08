@@ -143,7 +143,7 @@ export default function SubscriptionsScreen() {
   ), [categories, categoryFilter, filteredSubscriptions.length, openCreateForm, query, totalMonthly]);
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-950" edges={['top']}>
       <FlatList
         data={filteredSubscriptions}
         keyExtractor={(item) => item.id}

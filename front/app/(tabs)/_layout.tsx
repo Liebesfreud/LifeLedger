@@ -1,19 +1,22 @@
 import { Tabs } from 'expo-router';
 import { BarChart3, Boxes, CreditCard, Settings } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 
 export default function TabsLayout() {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: '#2563EB',
-        tabBarInactiveTintColor: '#94A3B8',
+        tabBarInactiveTintColor: isDark ? '#64748B' : '#94A3B8',
         tabBarStyle: {
           height: 68,
           paddingBottom: 10,
           paddingTop: 8,
-          borderTopColor: '#E2E8F0',
-          backgroundColor: '#FFFFFF',
+          borderTopColor: isDark ? '#1E293B' : '#E2E8F0',
+          backgroundColor: isDark ? '#020617' : '#FFFFFF',
         },
         tabBarLabelStyle: { fontSize: 12, fontWeight: '700' },
       }}

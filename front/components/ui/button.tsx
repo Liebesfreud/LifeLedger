@@ -6,8 +6,8 @@ const buttonVariants = cva('items-center justify-center rounded-2xl px-4', {
   variants: {
     variant: {
       default: 'bg-blue-600 active:bg-blue-700',
-      secondary: 'bg-slate-100 active:bg-slate-200',
-      ghost: 'bg-transparent active:bg-slate-100',
+      secondary: 'bg-slate-100 active:bg-slate-200 dark:bg-slate-800 dark:active:bg-slate-700',
+      ghost: 'bg-transparent active:bg-slate-100 dark:active:bg-slate-800',
       destructive: 'bg-rose-600 active:bg-rose-700',
     },
     size: {
@@ -25,8 +25,8 @@ const textVariants = cva('font-semibold', {
   variants: {
     variant: {
       default: 'text-white',
-      secondary: 'text-slate-900',
-      ghost: 'text-slate-700',
+      secondary: 'text-slate-900 dark:text-slate-50',
+      ghost: 'text-slate-700 dark:text-slate-200',
       destructive: 'text-white',
     },
   },

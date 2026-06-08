@@ -10,6 +10,7 @@ const defaultSettings: AppSettings = {
   monthlyBudget: 500,
   itemIdleAlertDays: 45,
   notificationEnabled: true,
+  themeMode: 'system',
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {

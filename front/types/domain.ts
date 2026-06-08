@@ -2,6 +2,7 @@ export type Currency = 'CNY' | 'USD' | 'EUR' | 'GBP' | 'JPY';
 export type BillingCycle = 'monthly' | 'yearly' | 'weekly' | 'quarterly';
 export type SubscriptionStatus = 'active' | 'paused' | 'cancelled';
 export type ItemCondition = 'new' | 'good' | 'used' | 'idle' | 'retired';
+export type ThemeMode = 'system' | 'light' | 'dark';
 
 export type Category = {
   id: string;
@@ -71,6 +72,7 @@ export type AppSettings = {
   monthlyBudget: number;
   itemIdleAlertDays: number;
   notificationEnabled: boolean;
+  themeMode: ThemeMode;
 };
 
 export type Insight = {

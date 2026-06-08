@@ -31,6 +31,7 @@ const initialSettings: AppSettings = {
   monthlyBudget: 500,
   itemIdleAlertDays: 45,
   notificationEnabled: true,
+  themeMode: 'system',
 };
 
 async function refresh(set: (state: Partial<AppState>) => void) {

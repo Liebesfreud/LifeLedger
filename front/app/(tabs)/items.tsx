@@ -175,7 +175,7 @@ export default function ItemsScreen() {
   ), [categories, categoryFilter, filteredItems.length, onlyIdle, openCreateForm, query, totalValue]);
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-950" edges={['top']}>
       <FlatList
         data={filteredItems}
         keyExtractor={(item) => item.id}

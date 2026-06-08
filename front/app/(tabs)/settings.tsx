@@ -9,10 +9,15 @@ import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { exportSnapshot, importSnapshot } from '@/lib/db';
 import { useAppStore } from '@/store/app-store';
-import type { Category, Currency } from '@/types/domain';
+import type { Category, Currency, ThemeMode } from '@/types/domain';
 
 const currencies: Currency[] = ['CNY', 'USD', 'EUR', 'GBP', 'JPY'];
 const categoryColors = ['#2563EB', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444'];
+const themeModes: Array<{ value: ThemeMode; label: string }> = [
+  { value: 'system', label: '跟随系统' },
+  { value: 'light', label: '浅色' },
+  { value: 'dark', label: '深色' },
+];
 
 export default function SettingsScreen() {
   const settings = useAppStore((state) => state.settings);
@@ -76,6 +81,14 @@ export default function SettingsScreen() {
     <Screen title="设置" subtitle="本地优先、可导入导出、可申请 Android 通知权限">
       <Card className="mb-4 gap-3">
         <Text className="text-lg font-black text-slate-950">偏好设置</Text>
+        <Text className="font-semibold text-slate-700">主题模式</Text>
+        <View className="flex-row flex-wrap gap-2">
+          {themeModes.map((mode) => (
+            <Button key={mode.value} size="sm" variant={settings.themeMode === mode.value ? 'default' : 'secondary'} onPress={() => updateSettings({ ...settings, themeMode: mode.value })}>
+              {mode.label}
+            </Button>
+          ))}
+        </View>
         <Text className="font-semibold text-slate-700">基础币种</Text>
         <View className="flex-row flex-wrap gap-2">
           {currencies.map((currency) => (
