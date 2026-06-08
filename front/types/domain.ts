@@ -51,6 +51,9 @@ export type Item = {
   usageCount: number;
   lastUsedAt?: string;
   idleAlertDays: number;
+  warrantyUntil?: string;
+  serialNumber?: string;
+  photoUri?: string;
   note?: string;
   createdAt: string;
 };

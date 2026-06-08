@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, FlatList, Text, View } from 'react-native';
+import { Alert, FlatList, Image, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -23,6 +23,7 @@ export default function ItemsScreen() {
   const [categoryFilter, setCategoryFilter] = useState<string | undefined>();
   const [onlyIdle, setOnlyIdle] = useState(false);
   const [editing, setEditing] = useState<Item | undefined>();
+  const [expandedItemId, setExpandedItemId] = useState<string | undefined>();
 
   const categoryMap = useMemo(() => new Map(categories.map((category) => [category.id, category.name])), [categories]);
   const usageTextMap = useMemo(() => {
@@ -50,6 +51,15 @@ export default function ItemsScreen() {
   const totalValue = useMemo(() => filteredItems.reduce((sum, item) => sum + item.purchasePrice, 0), [filteredItems]);
   const categoryName = useCallback((id?: string) => (id ? categoryMap.get(id) : undefined) ?? '未分类', [categoryMap]);
   const recentUsageText = useCallback((itemId: string) => usageTextMap.get(itemId) ?? '', [usageTextMap]);
+  const usageLogsByItem = useMemo(() => {
+    const map = new Map<string, typeof usageLogs>();
+    for (const log of usageLogs) {
+      const logs = map.get(log.itemId) ?? [];
+      logs.push(log);
+      map.set(log.itemId, logs);
+    }
+    return map;
+  }, [usageLogs]);
 
   const submitEditing = useCallback(async (input: Omit<Item, 'id' | 'createdAt'>) => {
     if (!editing) return;
@@ -62,8 +72,11 @@ export default function ItemsScreen() {
     const idleDays = Math.abs(Math.min(daysUntil(reference), 0));
     const costPerUse = item.usageCount > 0 ? item.purchasePrice / item.usageCount : item.purchasePrice;
     const recentLogs = recentUsageText(item.id);
+    const isExpanded = expandedItemId === item.id;
+    const fullLogs = usageLogsByItem.get(item.id) ?? [];
     return (
       <Card className="mb-3">
+        {item.photoUri ? <Image source={{ uri: item.photoUri }} className="mb-3 h-40 w-full rounded-2xl bg-slate-100" resizeMode="cover" /> : null}
         <View className="flex-row justify-between gap-4">
           <View className="flex-1">
             <Text className="text-xl font-black text-slate-950">{item.name}</Text>
@@ -77,10 +90,25 @@ export default function ItemsScreen() {
           </View>
         </View>
         <Text className="mt-3 text-sm text-slate-500">单次使用成本约 {money(costPerUse, item.currency)} · 上次使用 {item.lastUsedAt || '未记录'}</Text>
+        <Text className="mt-2 text-sm text-slate-400">保修截止：{item.warrantyUntil || '未记录'} · 序列号：{item.serialNumber || '未记录'}</Text>
         {recentLogs ? <Text className="mt-2 text-sm text-emerald-600">最近使用：{recentLogs}</Text> : null}
         {item.note ? <Text className="mt-2 text-sm text-slate-400">备注：{item.note}</Text> : null}
+        {isExpanded ? (
+          <View className="mt-4 rounded-2xl bg-slate-50 p-3">
+            <Text className="mb-2 font-black text-slate-900">完整使用历史</Text>
+            {fullLogs.length === 0 ? (
+              <Text className="text-sm text-slate-500">暂无使用记录。</Text>
+            ) : fullLogs.map((log) => (
+              <View key={log.id} className="mb-2 flex-row justify-between last:mb-0">
+                <Text className="text-sm font-semibold text-slate-700">{log.usedAt}</Text>
+                <Text className="text-sm text-emerald-600">+1 次</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
         <View className="mt-4 flex-row gap-2">
           <Button size="sm" variant="secondary" onPress={() => markUsed(item)}>记录使用</Button>
+          <Button size="sm" variant="secondary" onPress={() => setExpandedItemId((value) => value === item.id ? undefined : item.id)}>{isExpanded ? '收起' : '详情'}</Button>
           <Button size="sm" variant="secondary" onPress={() => setEditing(item)}>编辑</Button>
           <Button
             size="sm"
@@ -95,7 +123,7 @@ export default function ItemsScreen() {
         </View>
       </Card>
     );
-  }, [categoryName, markUsed, recentUsageText, removeItem]);
+  }, [categoryName, expandedItemId, markUsed, recentUsageText, removeItem, usageLogsByItem]);
 
   const listHeader = useMemo(() => (
     <View>

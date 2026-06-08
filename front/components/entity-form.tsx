@@ -1,5 +1,6 @@
+import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { Alert, Image, Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -141,6 +142,9 @@ export function ItemForm({
   const [condition, setCondition] = useState<ItemCondition>(initialValue?.condition ?? 'good');
   const [idleAlertDays, setIdleAlertDays] = useState(String(initialValue?.idleAlertDays ?? defaultIdleDays));
   const [categoryId, setCategoryId] = useState<string | undefined>(initialValue?.categoryId);
+  const [warrantyUntil, setWarrantyUntil] = useState(initialValue?.warrantyUntil ?? '');
+  const [serialNumber, setSerialNumber] = useState(initialValue?.serialNumber ?? '');
+  const [photoUri, setPhotoUri] = useState(initialValue?.photoUri ?? '');
   const [note, setNote] = useState(initialValue?.note ?? '');
 
   useEffect(() => {
@@ -153,14 +157,30 @@ export function ItemForm({
     setCondition(initialValue.condition);
     setIdleAlertDays(String(initialValue.idleAlertDays));
     setCategoryId(initialValue.categoryId);
+    setWarrantyUntil(initialValue.warrantyUntil ?? '');
+    setSerialNumber(initialValue.serialNumber ?? '');
+    setPhotoUri(initialValue.photoUri ?? '');
     setNote(initialValue.note ?? '');
   }, [initialValue]);
+
+  const pickPhoto = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return Alert.alert('相册未授权', '请允许访问相册后再选择物品照片。');
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.75,
+    });
+    if (!result.canceled && result.assets[0]?.uri) setPhotoUri(result.assets[0].uri);
+  };
 
   const submit = async () => {
     if (!name.trim()) return Alert.alert('请填写物品名称');
     const parsedPrice = parseNonNegativeNumber(purchasePrice);
     if (parsedPrice === null) return Alert.alert('请填写有效购入价');
     if (!isISODate(purchaseDate)) return Alert.alert('请填写有效购入日期', '日期格式需要是 YYYY-MM-DD，例如 2026-06-09。');
+    if (warrantyUntil.trim() && !isISODate(warrantyUntil.trim())) return Alert.alert('请填写有效保修日期', '日期格式需要是 YYYY-MM-DD，例如 2027-06-09。');
     if (!location.trim()) return Alert.alert('请填写存放位置');
     const parsedIdleDays = parsePositiveInteger(idleAlertDays);
     if (parsedIdleDays === null) return Alert.alert('请填写有效闲置提醒天数');
@@ -175,11 +195,17 @@ export function ItemForm({
       usageCount: initialValue?.usageCount ?? 0,
       lastUsedAt: initialValue?.lastUsedAt,
       idleAlertDays: parsedIdleDays,
+      warrantyUntil: warrantyUntil.trim() || undefined,
+      serialNumber: serialNumber.trim() || undefined,
+      photoUri: photoUri || undefined,
       note: note.trim() || undefined,
     });
     if (!initialValue) {
       setName('');
       setPurchasePrice('');
+      setWarrantyUntil('');
+      setSerialNumber('');
+      setPhotoUri('');
       setNote('');
     }
   };
@@ -196,6 +222,13 @@ export function ItemForm({
       <Input placeholder="购入日期 YYYY-MM-DD" value={purchaseDate} onChangeText={setPurchaseDate} />
       <Input placeholder="存放位置" value={location} onChangeText={setLocation} />
       <Input placeholder="闲置提醒天数" keyboardType="number-pad" value={idleAlertDays} onChangeText={setIdleAlertDays} />
+      <Input placeholder="保修截止日期，可选 YYYY-MM-DD" value={warrantyUntil} onChangeText={setWarrantyUntil} />
+      <Input placeholder="序列号/资产编号，可选" value={serialNumber} onChangeText={setSerialNumber} />
+      {photoUri ? <Image source={{ uri: photoUri }} className="h-36 w-full rounded-2xl bg-slate-100" resizeMode="cover" /> : null}
+      <View className="flex-row gap-3">
+        <Button className="flex-1" variant="secondary" onPress={pickPhoto}>{photoUri ? '更换照片' : '选择照片'}</Button>
+        {photoUri ? <Button className="flex-1" variant="ghost" onPress={() => setPhotoUri('')}>移除照片</Button> : null}
+      </View>
       <Input placeholder="备注，例如保修期/序列号/购买理由" value={note} onChangeText={setNote} />
       <View className="flex-row gap-3">
         {onCancel ? <Button className="flex-1" variant="secondary" onPress={onCancel}>取消</Button> : null}

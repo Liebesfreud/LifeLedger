@@ -110,6 +110,9 @@ export async function migrateDatabase() {
       usageCount INTEGER NOT NULL,
       lastUsedAt TEXT,
       idleAlertDays INTEGER NOT NULL,
+      warrantyUntil TEXT,
+      serialNumber TEXT,
+      photoUri TEXT,
       note TEXT,
       createdAt TEXT NOT NULL
     );
@@ -127,6 +130,9 @@ export async function migrateDatabase() {
   `);
   await ensureColumn(db, 'subscriptions', 'status', "TEXT NOT NULL DEFAULT 'active'");
   await ensureColumn(db, 'subscriptions', 'paymentMethod', 'TEXT');
+  await ensureColumn(db, 'items', 'warrantyUntil', 'TEXT');
+  await ensureColumn(db, 'items', 'serialNumber', 'TEXT');
+  await ensureColumn(db, 'items', 'photoUri', 'TEXT');
 
   const categoryRows = await db.getAllAsync<{ count: number }>('SELECT COUNT(*) as count FROM categories');
   if ((categoryRows[0]?.count ?? 0) === 0) {
@@ -244,8 +250,8 @@ export async function listItems() {
 export async function saveItem(item: Item) {
   const db = await getDb();
   await db.runAsync(
-    `INSERT OR REPLACE INTO items (id, name, purchasePrice, currency, purchaseDate, categoryId, location, condition, usageCount, lastUsedAt, idleAlertDays, note, createdAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT OR REPLACE INTO items (id, name, purchasePrice, currency, purchaseDate, categoryId, location, condition, usageCount, lastUsedAt, idleAlertDays, warrantyUntil, serialNumber, photoUri, note, createdAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       item.id,
       item.name,
@@ -258,6 +264,9 @@ export async function saveItem(item: Item) {
       item.usageCount,
       item.lastUsedAt ?? null,
       item.idleAlertDays,
+      item.warrantyUntil ?? null,
+      item.serialNumber ?? null,
+      item.photoUri ?? null,
       item.note ?? null,
       item.createdAt,
     ],

@@ -57,5 +57,20 @@ export async function syncLocalReminders(subscriptions: Subscription[], items: I
       },
       trigger: reminderAt as unknown as Notifications.NotificationTriggerInput,
     });
+
+    if (item.warrantyUntil) {
+      const warrantyReminderAt = subDays(parseISO(item.warrantyUntil), 7);
+      if (isAfter(warrantyReminderAt, now)) {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: `${item.name} 保修即将到期`,
+            body: `保修将在 7 天后到期，建议检查状态并保存发票/维修记录。`,
+            data: { type: 'item_warranty', id: item.id },
+            ...(Platform.OS === 'android' ? { channelId: 'reminders' } : {}),
+          },
+          trigger: warrantyReminderAt as unknown as Notifications.NotificationTriggerInput,
+        });
+      }
+    }
   }
 }
