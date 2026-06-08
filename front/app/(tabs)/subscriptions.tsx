@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Alert, FlatList, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,8 @@ export default function SubscriptionsScreen() {
   const [categoryFilter, setCategoryFilter] = useState<string | undefined>();
   const [editing, setEditing] = useState<Subscription | undefined>();
 
+  const categoryMap = useMemo(() => new Map(categories.map((category) => [category.id, category.name])), [categories]);
+
   const filteredSubscriptions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return subscriptions.filter((subscription) => {
@@ -29,10 +31,16 @@ export default function SubscriptionsScreen() {
     });
   }, [categoryFilter, query, subscriptions]);
 
-  const totalMonthly = filteredSubscriptions.reduce((sum, sub) => sum + monthlyCost(sub.price, sub.billingCycle), 0);
-  const categoryName = (id?: string) => categories.find((category) => category.id === id)?.name ?? '未分类';
+  const totalMonthly = useMemo(() => filteredSubscriptions.reduce((sum, sub) => sum + monthlyCost(sub.price, sub.billingCycle), 0), [filteredSubscriptions]);
+  const categoryName = useCallback((id?: string) => (id ? categoryMap.get(id) : undefined) ?? '未分类', [categoryMap]);
 
-  const renderSubscription = ({ item: sub }: { item: Subscription }) => {
+  const submitEditing = useCallback(async (input: Omit<Subscription, 'id' | 'createdAt'>) => {
+    if (!editing) return;
+    await updateSubscription({ ...editing, ...input });
+    setEditing(undefined);
+  }, [editing, updateSubscription]);
+
+  const renderSubscription = useCallback(({ item: sub }: { item: Subscription }) => {
     const days = daysUntil(sub.nextPaymentDate);
     return (
       <Card className="mb-3">
@@ -64,7 +72,37 @@ export default function SubscriptionsScreen() {
         </View>
       </Card>
     );
-  };
+  }, [categoryName, removeSubscription]);
+
+  const listHeader = useMemo(() => (
+    <View>
+      <View className="mb-5">
+        <Text className="text-3xl font-black text-slate-950">订阅管理</Text>
+        <Text className="mt-1 text-base text-slate-500">筛选结果 {filteredSubscriptions.length} 项 · 月支出 {money(totalMonthly)}</Text>
+      </View>
+      {editing ? (
+        <SubscriptionForm
+          categories={categories}
+          initialValue={editing}
+          onCancel={() => setEditing(undefined)}
+          onSubmit={submitEditing}
+        />
+      ) : (
+        <SubscriptionForm categories={categories} onSubmit={addSubscription} />
+      )}
+      <Card className="mb-4 gap-3">
+        <Input placeholder="搜索订阅名称或备注" value={query} onChangeText={setQuery} />
+        <View className="flex-row flex-wrap gap-2">
+          <Button size="sm" variant={!categoryFilter ? 'default' : 'secondary'} onPress={() => setCategoryFilter(undefined)}>全部</Button>
+          {categories.map((category) => (
+            <Button key={category.id} size="sm" variant={categoryFilter === category.id ? 'default' : 'secondary'} onPress={() => setCategoryFilter(category.id)}>
+              {category.name}
+            </Button>
+          ))}
+        </View>
+      </Card>
+    </View>
+  ), [addSubscription, categories, categoryFilter, editing, filteredSubscriptions.length, query, submitEditing, totalMonthly]);
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
@@ -77,38 +115,7 @@ export default function SubscriptionsScreen() {
         initialNumToRender={8}
         maxToRenderPerBatch={8}
         windowSize={7}
-        ListHeaderComponent={(
-          <View>
-            <View className="mb-5">
-              <Text className="text-3xl font-black text-slate-950">订阅管理</Text>
-              <Text className="mt-1 text-base text-slate-500">筛选结果 {filteredSubscriptions.length} 项 · 月支出 {money(totalMonthly)}</Text>
-            </View>
-            {editing ? (
-              <SubscriptionForm
-                categories={categories}
-                initialValue={editing}
-                onCancel={() => setEditing(undefined)}
-                onSubmit={async (input) => {
-                  await updateSubscription({ ...editing, ...input });
-                  setEditing(undefined);
-                }}
-              />
-            ) : (
-              <SubscriptionForm categories={categories} onSubmit={addSubscription} />
-            )}
-            <Card className="mb-4 gap-3">
-              <Input placeholder="搜索订阅名称或备注" value={query} onChangeText={setQuery} />
-              <View className="flex-row flex-wrap gap-2">
-                <Button size="sm" variant={!categoryFilter ? 'default' : 'secondary'} onPress={() => setCategoryFilter(undefined)}>全部</Button>
-                {categories.map((category) => (
-                  <Button key={category.id} size="sm" variant={categoryFilter === category.id ? 'default' : 'secondary'} onPress={() => setCategoryFilter(category.id)}>
-                    {category.name}
-                  </Button>
-                ))}
-              </View>
-            </Card>
-          </View>
-        )}
+        ListHeaderComponent={listHeader}
         ListEmptyComponent={<Text className="text-center text-slate-500">没有匹配的订阅，调整筛选或新增一个。</Text>}
       />
     </SafeAreaView>

@@ -12,6 +12,38 @@ const defaultSettings: AppSettings = {
   notificationEnabled: true,
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
+
+function isNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function validCategory(value: unknown): value is Category {
+  return isRecord(value) && isString(value.id) && isString(value.name) && isString(value.color) && (value.module === 'subscription' || value.module === 'item') && isString(value.createdAt);
+}
+
+function validSubscription(value: unknown): value is Subscription {
+  return isRecord(value) && isString(value.id) && isString(value.name) && isNumber(value.price) && isString(value.currency) && isString(value.billingCycle) && isString(value.nextPaymentDate) && isNumber(value.notifyDaysBefore) && typeof value.autoRenew === 'boolean' && isString(value.createdAt);
+}
+
+function validItem(value: unknown): value is Item {
+  return isRecord(value) && isString(value.id) && isString(value.name) && isNumber(value.purchasePrice) && isString(value.currency) && isString(value.purchaseDate) && isString(value.location) && isString(value.condition) && isNumber(value.usageCount) && isNumber(value.idleAlertDays) && isString(value.createdAt);
+}
+
+function validItemUsageLog(value: unknown): value is ItemUsageLog {
+  return isRecord(value) && isString(value.id) && isString(value.itemId) && isString(value.usedAt) && isString(value.createdAt);
+}
+
+function validSettings(value: unknown): value is AppSettings {
+  return isRecord(value) && isString(value.baseCurrency) && isNumber(value.monthlyBudget) && isNumber(value.itemIdleAlertDays) && typeof value.notificationEnabled === 'boolean';
+}
+
 function getDb() {
   if (!dbPromise) dbPromise = SQLite.openDatabaseAsync(DB_NAME);
   return dbPromise;
@@ -219,9 +251,10 @@ export async function exportSnapshot() {
 }
 
 export async function importSnapshot(payload: { categories?: Category[]; subscriptions?: Subscription[]; items?: Item[]; itemUsageLogs?: ItemUsageLog[]; settings?: AppSettings }) {
-  if (payload.categories) for (const category of payload.categories) await upsertCategory(category);
-  if (payload.subscriptions) for (const subscription of payload.subscriptions) await saveSubscription(subscription);
-  if (payload.items) for (const item of payload.items) await saveItem(item);
-  if (payload.itemUsageLogs) for (const log of payload.itemUsageLogs) await saveItemUsageLog(log);
-  if (payload.settings) await saveSettings(payload.settings);
+  if (!isRecord(payload)) throw new Error('Invalid snapshot');
+  if (Array.isArray(payload.categories)) for (const category of payload.categories.filter(validCategory)) await upsertCategory(category);
+  if (Array.isArray(payload.subscriptions)) for (const subscription of payload.subscriptions.filter(validSubscription)) await saveSubscription(subscription);
+  if (Array.isArray(payload.items)) for (const item of payload.items.filter(validItem)) await saveItem(item);
+  if (Array.isArray(payload.itemUsageLogs)) for (const log of payload.itemUsageLogs.filter(validItemUsageLog)) await saveItemUsageLog(log);
+  if (validSettings(payload.settings)) await saveSettings(payload.settings);
 }

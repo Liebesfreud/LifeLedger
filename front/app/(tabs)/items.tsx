@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Alert, FlatList, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,17 @@ export default function ItemsScreen() {
   const [onlyIdle, setOnlyIdle] = useState(false);
   const [editing, setEditing] = useState<Item | undefined>();
 
+  const categoryMap = useMemo(() => new Map(categories.map((category) => [category.id, category.name])), [categories]);
+  const usageTextMap = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const log of usageLogs) {
+      const logs = map.get(log.itemId) ?? [];
+      if (logs.length < 3) logs.push(log.usedAt);
+      map.set(log.itemId, logs);
+    }
+    return new Map(Array.from(map.entries()).map(([itemId, logs]) => [itemId, logs.join('、')]));
+  }, [usageLogs]);
+
   const filteredItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return items.filter((item) => {
@@ -36,11 +47,17 @@ export default function ItemsScreen() {
     });
   }, [categoryFilter, items, onlyIdle, query]);
 
-  const totalValue = filteredItems.reduce((sum, item) => sum + item.purchasePrice, 0);
-  const categoryName = (id?: string) => categories.find((category) => category.id === id)?.name ?? '未分类';
-  const recentUsageText = (itemId: string) => usageLogs.filter((log) => log.itemId === itemId).slice(0, 3).map((log) => log.usedAt).join('、');
+  const totalValue = useMemo(() => filteredItems.reduce((sum, item) => sum + item.purchasePrice, 0), [filteredItems]);
+  const categoryName = useCallback((id?: string) => (id ? categoryMap.get(id) : undefined) ?? '未分类', [categoryMap]);
+  const recentUsageText = useCallback((itemId: string) => usageTextMap.get(itemId) ?? '', [usageTextMap]);
 
-  const renderItem = ({ item }: { item: Item }) => {
+  const submitEditing = useCallback(async (input: Omit<Item, 'id' | 'createdAt'>) => {
+    if (!editing) return;
+    await updateItem({ ...editing, ...input });
+    setEditing(undefined);
+  }, [editing, updateItem]);
+
+  const renderItem = useCallback(({ item }: { item: Item }) => {
     const reference = item.lastUsedAt || item.purchaseDate;
     const idleDays = Math.abs(Math.min(daysUntil(reference), 0));
     const costPerUse = item.usageCount > 0 ? item.purchasePrice / item.usageCount : item.purchasePrice;
@@ -78,7 +95,39 @@ export default function ItemsScreen() {
         </View>
       </Card>
     );
-  };
+  }, [categoryName, markUsed, recentUsageText, removeItem]);
+
+  const listHeader = useMemo(() => (
+    <View>
+      <View className="mb-5">
+        <Text className="text-3xl font-black text-slate-950">物品管理</Text>
+        <Text className="mt-1 text-base text-slate-500">筛选结果 {filteredItems.length} 件 · 总投入 {money(totalValue)}</Text>
+      </View>
+      {editing ? (
+        <ItemForm
+          categories={categories}
+          defaultIdleDays={settings.itemIdleAlertDays}
+          initialValue={editing}
+          onCancel={() => setEditing(undefined)}
+          onSubmit={submitEditing}
+        />
+      ) : (
+        <ItemForm categories={categories} defaultIdleDays={settings.itemIdleAlertDays} onSubmit={addItem} />
+      )}
+      <Card className="mb-4 gap-3">
+        <Input placeholder="搜索物品、位置或备注" value={query} onChangeText={setQuery} />
+        <View className="flex-row flex-wrap gap-2">
+          <Button size="sm" variant={!categoryFilter ? 'default' : 'secondary'} onPress={() => setCategoryFilter(undefined)}>全部</Button>
+          {categories.map((category) => (
+            <Button key={category.id} size="sm" variant={categoryFilter === category.id ? 'default' : 'secondary'} onPress={() => setCategoryFilter(category.id)}>
+              {category.name}
+            </Button>
+          ))}
+          <Button size="sm" variant={onlyIdle ? 'default' : 'secondary'} onPress={() => setOnlyIdle((value) => !value)}>只看闲置</Button>
+        </View>
+      </Card>
+    </View>
+  ), [addItem, categories, categoryFilter, editing, filteredItems.length, onlyIdle, query, settings.itemIdleAlertDays, submitEditing, totalValue]);
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
@@ -91,40 +140,7 @@ export default function ItemsScreen() {
         initialNumToRender={8}
         maxToRenderPerBatch={8}
         windowSize={7}
-        ListHeaderComponent={(
-          <View>
-            <View className="mb-5">
-              <Text className="text-3xl font-black text-slate-950">物品管理</Text>
-              <Text className="mt-1 text-base text-slate-500">筛选结果 {filteredItems.length} 件 · 总投入 {money(totalValue)}</Text>
-            </View>
-            {editing ? (
-              <ItemForm
-                categories={categories}
-                defaultIdleDays={settings.itemIdleAlertDays}
-                initialValue={editing}
-                onCancel={() => setEditing(undefined)}
-                onSubmit={async (input) => {
-                  await updateItem({ ...editing, ...input });
-                  setEditing(undefined);
-                }}
-              />
-            ) : (
-              <ItemForm categories={categories} defaultIdleDays={settings.itemIdleAlertDays} onSubmit={addItem} />
-            )}
-            <Card className="mb-4 gap-3">
-              <Input placeholder="搜索物品、位置或备注" value={query} onChangeText={setQuery} />
-              <View className="flex-row flex-wrap gap-2">
-                <Button size="sm" variant={!categoryFilter ? 'default' : 'secondary'} onPress={() => setCategoryFilter(undefined)}>全部</Button>
-                {categories.map((category) => (
-                  <Button key={category.id} size="sm" variant={categoryFilter === category.id ? 'default' : 'secondary'} onPress={() => setCategoryFilter(category.id)}>
-                    {category.name}
-                  </Button>
-                ))}
-                <Button size="sm" variant={onlyIdle ? 'default' : 'secondary'} onPress={() => setOnlyIdle((value) => !value)}>只看闲置</Button>
-              </View>
-            </Card>
-          </View>
-        )}
+        ListHeaderComponent={listHeader}
         ListEmptyComponent={<Text className="text-center text-slate-500">没有匹配的物品，调整筛选或新增一件。</Text>}
       />
     </SafeAreaView>

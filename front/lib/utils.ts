@@ -1,5 +1,5 @@
 import { clsx, type ClassValue } from 'clsx';
-import { format, differenceInCalendarDays, parseISO } from 'date-fns';
+import { format, differenceInCalendarDays, parseISO, isValid } from 'date-fns';
 import { twMerge } from 'tailwind-merge';
 import type { BillingCycle, Currency } from '@/types/domain';
 
@@ -18,6 +18,22 @@ export function todayISO() {
 export function formatDate(value?: string) {
   if (!value) return '未记录';
   return format(parseISO(value), 'yyyy-MM-dd');
+}
+
+export function isISODate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = parseISO(value);
+  return isValid(parsed) && format(parsed, 'yyyy-MM-dd') === value;
+}
+
+export function parseNonNegativeNumber(value: string) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+export function parsePositiveInteger(value: string) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
 export function daysUntil(value: string) {

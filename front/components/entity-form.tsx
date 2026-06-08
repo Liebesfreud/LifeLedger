@@ -3,6 +3,7 @@ import { Alert, Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { isISODate, parseNonNegativeNumber, parsePositiveInteger } from '@/lib/utils';
 import type { BillingCycle, Category, Currency, Item, ItemCondition, Subscription } from '@/types/domain';
 
 const currencies: Currency[] = ['CNY', 'USD', 'EUR', 'GBP', 'JPY'];
@@ -73,9 +74,12 @@ export function SubscriptionForm({
 
   const submit = async () => {
     if (!name.trim()) return Alert.alert('请填写订阅名称');
-    const parsedPrice = Number(price);
-    if (!Number.isFinite(parsedPrice) || parsedPrice < 0) return Alert.alert('请填写有效价格');
-    await onSubmit({ name: name.trim(), price: parsedPrice, currency, billingCycle, nextPaymentDate, categoryId, notifyDaysBefore: Number(notifyDaysBefore) || 0, icon, autoRenew: true });
+    const parsedPrice = parseNonNegativeNumber(price);
+    if (parsedPrice === null) return Alert.alert('请填写有效价格');
+    if (!isISODate(nextPaymentDate)) return Alert.alert('请填写有效下次付款日期', '日期格式需要是 YYYY-MM-DD，例如 2026-06-09。');
+    const parsedNotifyDays = parseNonNegativeNumber(notifyDaysBefore);
+    if (parsedNotifyDays === null || !Number.isInteger(parsedNotifyDays)) return Alert.alert('请填写有效提醒天数');
+    await onSubmit({ name: name.trim(), price: parsedPrice, currency, billingCycle, nextPaymentDate, categoryId, notifyDaysBefore: parsedNotifyDays, icon, autoRenew: true });
     if (!initialValue) {
       setName('');
       setPrice('');
@@ -142,19 +146,23 @@ export function ItemForm({
 
   const submit = async () => {
     if (!name.trim()) return Alert.alert('请填写物品名称');
-    const parsedPrice = Number(purchasePrice);
-    if (!Number.isFinite(parsedPrice) || parsedPrice < 0) return Alert.alert('请填写有效购入价');
+    const parsedPrice = parseNonNegativeNumber(purchasePrice);
+    if (parsedPrice === null) return Alert.alert('请填写有效购入价');
+    if (!isISODate(purchaseDate)) return Alert.alert('请填写有效购入日期', '日期格式需要是 YYYY-MM-DD，例如 2026-06-09。');
+    if (!location.trim()) return Alert.alert('请填写存放位置');
+    const parsedIdleDays = parsePositiveInteger(idleAlertDays);
+    if (parsedIdleDays === null) return Alert.alert('请填写有效闲置提醒天数');
     await onSubmit({
       name: name.trim(),
       purchasePrice: parsedPrice,
       currency,
       purchaseDate,
       categoryId,
-      location,
+      location: location.trim(),
       condition,
       usageCount: initialValue?.usageCount ?? 0,
       lastUsedAt: initialValue?.lastUsedAt,
-      idleAlertDays: Number(idleAlertDays) || defaultIdleDays,
+      idleAlertDays: parsedIdleDays,
       note: note.trim() || undefined,
     });
     if (!initialValue) {
