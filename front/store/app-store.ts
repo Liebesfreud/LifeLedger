@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { AppSettings, Category, Item, ItemUsageLog, Subscription } from '@/types/domain';
+import type { AppSettings, Category, Item, ItemUsageLog, Subscription, SubscriptionRenewalLog } from '@/types/domain';
 import { annualCost, createId, daysUntil, monthlyCost, todayISO } from '@/lib/utils';
 import * as repo from '@/lib/db';
 import { syncLocalReminders } from '@/lib/notifications';
@@ -8,12 +8,14 @@ type AppState = {
   ready: boolean;
   categories: Category[];
   subscriptions: Subscription[];
+  subscriptionRenewalLogs: SubscriptionRenewalLog[];
   items: Item[];
   itemUsageLogs: ItemUsageLog[];
   settings: AppSettings;
   initialize: () => Promise<void>;
   addSubscription: (input: Omit<Subscription, 'id' | 'createdAt'>) => Promise<void>;
   updateSubscription: (subscription: Subscription) => Promise<void>;
+  renewSubscription: (subscription: Subscription) => Promise<void>;
   removeSubscription: (id: string) => Promise<void>;
   addItem: (input: Omit<Item, 'id' | 'createdAt' | 'usageCount'> & { usageCount?: number }) => Promise<void>;
   updateItem: (item: Item) => Promise<void>;
@@ -32,14 +34,15 @@ const initialSettings: AppSettings = {
 };
 
 async function refresh(set: (state: Partial<AppState>) => void) {
-  const [categories, subscriptions, items, itemUsageLogs, settings] = await Promise.all([
+  const [categories, subscriptions, subscriptionRenewalLogs, items, itemUsageLogs, settings] = await Promise.all([
     repo.listCategories(),
     repo.listSubscriptions(),
+    repo.listSubscriptionRenewalLogs(),
     repo.listItems(),
     repo.listItemUsageLogs(),
     repo.getSettings(),
   ]);
-  set({ categories, subscriptions, items, itemUsageLogs, settings, ready: true });
+  set({ categories, subscriptions, subscriptionRenewalLogs, items, itemUsageLogs, settings, ready: true });
   await syncLocalReminders(subscriptions, items, settings).catch((error) => console.warn('Reminder sync skipped', error));
 }
 
@@ -47,6 +50,7 @@ export const useAppStore = create<AppState>((set) => ({
   ready: false,
   categories: [],
   subscriptions: [],
+  subscriptionRenewalLogs: [],
   items: [],
   itemUsageLogs: [],
   settings: initialSettings,
@@ -55,11 +59,15 @@ export const useAppStore = create<AppState>((set) => ({
     await refresh(set);
   },
   addSubscription: async (input) => {
-    await repo.saveSubscription({ ...input, id: createId('sub'), createdAt: new Date().toISOString() });
+    await repo.saveSubscription({ ...input, id: createId('sub'), status: input.status ?? 'active', createdAt: new Date().toISOString() });
     await refresh(set);
   },
   updateSubscription: async (subscription) => {
     await repo.saveSubscription(subscription);
+    await refresh(set);
+  },
+  renewSubscription: async (subscription) => {
+    await repo.renewSubscription(subscription);
     await refresh(set);
   },
   removeSubscription: async (id) => {
@@ -97,9 +105,10 @@ export const useAppStore = create<AppState>((set) => ({
 }));
 
 export function selectDashboardData(state: AppState) {
-  const monthlySpend = state.subscriptions.reduce((sum, sub) => sum + monthlyCost(sub.price, sub.billingCycle), 0);
-  const annualSpend = state.subscriptions.reduce((sum, sub) => sum + annualCost(sub.price, sub.billingCycle), 0);
-  const dueSoon = state.subscriptions.filter((sub) => daysUntil(sub.nextPaymentDate) <= sub.notifyDaysBefore).length;
+  const activeSubscriptions = state.subscriptions.filter((sub) => sub.status === 'active');
+  const monthlySpend = activeSubscriptions.reduce((sum, sub) => sum + monthlyCost(sub.price, sub.billingCycle), 0);
+  const annualSpend = activeSubscriptions.reduce((sum, sub) => sum + annualCost(sub.price, sub.billingCycle), 0);
+  const dueSoon = activeSubscriptions.filter((sub) => daysUntil(sub.nextPaymentDate) <= sub.notifyDaysBefore).length;
   const idleItems = state.items.filter((item) => {
     const reference = item.lastUsedAt || item.purchaseDate;
     return daysUntil(reference) < -item.idleAlertDays;

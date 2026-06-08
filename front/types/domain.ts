@@ -1,5 +1,6 @@
 export type Currency = 'CNY' | 'USD' | 'EUR' | 'GBP' | 'JPY';
 export type BillingCycle = 'monthly' | 'yearly' | 'weekly' | 'quarterly';
+export type SubscriptionStatus = 'active' | 'paused' | 'cancelled';
 export type ItemCondition = 'new' | 'good' | 'used' | 'idle' | 'retired';
 
 export type Category = {
@@ -22,6 +23,19 @@ export type Subscription = {
   description?: string;
   notifyDaysBefore: number;
   autoRenew: boolean;
+  status: SubscriptionStatus;
+  paymentMethod?: string;
+  createdAt: string;
+};
+
+export type SubscriptionRenewalLog = {
+  id: string;
+  subscriptionId: string;
+  paidAt: string;
+  amount: number;
+  currency: Currency;
+  nextPaymentDate: string;
+  note?: string;
   createdAt: string;
 };
 

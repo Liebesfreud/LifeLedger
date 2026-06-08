@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { isISODate, parseNonNegativeNumber, parsePositiveInteger } from '@/lib/utils';
-import type { BillingCycle, Category, Currency, Item, ItemCondition, Subscription } from '@/types/domain';
+import type { BillingCycle, Category, Currency, Item, ItemCondition, Subscription, SubscriptionStatus } from '@/types/domain';
 
 const currencies: Currency[] = ['CNY', 'USD', 'EUR', 'GBP', 'JPY'];
 const cycles: BillingCycle[] = ['monthly', 'yearly', 'quarterly', 'weekly'];
+const subscriptionStatuses: SubscriptionStatus[] = ['active', 'paused', 'cancelled'];
 const conditions: ItemCondition[] = ['new', 'good', 'used', 'idle', 'retired'];
 
 type SubscriptionInput = Omit<Subscription, 'id' | 'createdAt'>;
@@ -59,6 +60,9 @@ export function SubscriptionForm({
   const [notifyDaysBefore, setNotifyDaysBefore] = useState(String(initialValue?.notifyDaysBefore ?? 3));
   const [icon, setIcon] = useState(initialValue?.icon ?? '💳');
   const [categoryId, setCategoryId] = useState<string | undefined>(initialValue?.categoryId);
+  const [status, setStatus] = useState<SubscriptionStatus>(initialValue?.status ?? 'active');
+  const [paymentMethod, setPaymentMethod] = useState(initialValue?.paymentMethod ?? '');
+  const [autoRenew, setAutoRenew] = useState(initialValue?.autoRenew ?? true);
 
   useEffect(() => {
     if (!initialValue) return;
@@ -70,6 +74,9 @@ export function SubscriptionForm({
     setNotifyDaysBefore(String(initialValue.notifyDaysBefore));
     setIcon(initialValue.icon ?? '💳');
     setCategoryId(initialValue.categoryId);
+    setStatus(initialValue.status ?? 'active');
+    setPaymentMethod(initialValue.paymentMethod ?? '');
+    setAutoRenew(initialValue.autoRenew);
   }, [initialValue]);
 
   const submit = async () => {
@@ -79,7 +86,7 @@ export function SubscriptionForm({
     if (!isISODate(nextPaymentDate)) return Alert.alert('请填写有效下次付款日期', '日期格式需要是 YYYY-MM-DD，例如 2026-06-09。');
     const parsedNotifyDays = parseNonNegativeNumber(notifyDaysBefore);
     if (parsedNotifyDays === null || !Number.isInteger(parsedNotifyDays)) return Alert.alert('请填写有效提醒天数');
-    await onSubmit({ name: name.trim(), price: parsedPrice, currency, billingCycle, nextPaymentDate, categoryId, notifyDaysBefore: parsedNotifyDays, icon, autoRenew: true });
+    await onSubmit({ name: name.trim(), price: parsedPrice, currency, billingCycle, nextPaymentDate, categoryId, notifyDaysBefore: parsedNotifyDays, icon, autoRenew, status, paymentMethod: paymentMethod.trim() || undefined });
     if (!initialValue) {
       setName('');
       setPrice('');
@@ -96,8 +103,13 @@ export function SubscriptionForm({
       </View>
       <ChoiceRow values={currencies} value={currency} onChange={setCurrency} />
       <ChoiceRow values={cycles} value={billingCycle} onChange={setBillingCycle} labels={{ monthly: '每月', yearly: '每年', quarterly: '每季', weekly: '每周' }} />
+      <Text className="font-semibold text-slate-700">状态</Text>
+      <ChoiceRow values={subscriptionStatuses} value={status} onChange={setStatus} labels={{ active: '使用中', paused: '已暂停', cancelled: '已取消' }} />
+      <Text className="font-semibold text-slate-700">续费方式</Text>
+      <ChoiceRow values={['auto', 'manual'] as const} value={autoRenew ? 'auto' : 'manual'} onChange={(value) => setAutoRenew(value === 'auto')} labels={{ auto: '自动续费', manual: '手动确认' }} />
       <Text className="font-semibold text-slate-700">分类</Text>
       <CategoryChoice categories={categories} value={categoryId} onChange={setCategoryId} />
+      <Input placeholder="付款方式，例如 招商银行 / PayPal / App Store" value={paymentMethod} onChangeText={setPaymentMethod} />
       <Input placeholder="下次付款日期 YYYY-MM-DD" value={nextPaymentDate} onChangeText={setNextPaymentDate} />
       <Input placeholder="提前提醒天数" keyboardType="number-pad" value={notifyDaysBefore} onChangeText={setNotifyDaysBefore} />
       <View className="flex-row gap-3">

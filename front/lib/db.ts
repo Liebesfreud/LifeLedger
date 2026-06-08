@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
-import type { Category, Item, ItemUsageLog, Subscription, AppSettings } from '@/types/domain';
-import { createId, todayISO } from '@/lib/utils';
+import type { Category, Item, ItemUsageLog, Subscription, SubscriptionRenewalLog, AppSettings } from '@/types/domain';
+import { createId, nextBillingDate, todayISO } from '@/lib/utils';
 
 const DB_NAME = 'subtrack_mobile.db';
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -30,6 +30,10 @@ function validCategory(value: unknown): value is Category {
 
 function validSubscription(value: unknown): value is Subscription {
   return isRecord(value) && isString(value.id) && isString(value.name) && isNumber(value.price) && isString(value.currency) && isString(value.billingCycle) && isString(value.nextPaymentDate) && isNumber(value.notifyDaysBefore) && typeof value.autoRenew === 'boolean' && isString(value.createdAt);
+}
+
+function validSubscriptionRenewalLog(value: unknown): value is SubscriptionRenewalLog {
+  return isRecord(value) && isString(value.id) && isString(value.subscriptionId) && isString(value.paidAt) && isNumber(value.amount) && isString(value.currency) && isString(value.nextPaymentDate) && isString(value.createdAt);
 }
 
 function validItem(value: unknown): value is Item {
@@ -80,6 +84,18 @@ export async function migrateDatabase() {
       description TEXT,
       notifyDaysBefore INTEGER NOT NULL,
       autoRenew INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      paymentMethod TEXT,
+      createdAt TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS subscription_renewal_logs (
+      id TEXT PRIMARY KEY NOT NULL,
+      subscriptionId TEXT NOT NULL,
+      paidAt TEXT NOT NULL,
+      amount REAL NOT NULL,
+      currency TEXT NOT NULL,
+      nextPaymentDate TEXT NOT NULL,
+      note TEXT,
       createdAt TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS items (
@@ -109,6 +125,8 @@ export async function migrateDatabase() {
       value TEXT NOT NULL
     );
   `);
+  await ensureColumn(db, 'subscriptions', 'status', "TEXT NOT NULL DEFAULT 'active'");
+  await ensureColumn(db, 'subscriptions', 'paymentMethod', 'TEXT');
 
   const categoryRows = await db.getAllAsync<{ count: number }>('SELECT COUNT(*) as count FROM categories');
   if ((categoryRows[0]?.count ?? 0) === 0) {
@@ -125,6 +143,13 @@ export async function migrateDatabase() {
   const settingsRows = await db.getAllAsync<{ value: string }>('SELECT value FROM settings WHERE key = ?', ['app']);
   if (!settingsRows[0]) {
     await db.runAsync('INSERT INTO settings (key, value) VALUES (?, ?)', ['app', JSON.stringify(defaultSettings)]);
+  }
+}
+
+async function ensureColumn(db: SQLite.SQLiteDatabase, table: string, column: string, definition: string) {
+  const rows = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(${table})`);
+  if (!rows.some((row) => row.name === column)) {
+    await db.execAsync(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
   }
 }
 
@@ -151,14 +176,14 @@ export async function deleteCategory(id: string) {
 export async function listSubscriptions() {
   const db = await getDb();
   const rows = await db.getAllAsync<Omit<Subscription, 'autoRenew'> & { autoRenew: number }>('SELECT * FROM subscriptions ORDER BY nextPaymentDate ASC');
-  return rows.map((row) => ({ ...row, autoRenew: intToBool(Number(row.autoRenew)) }));
+  return rows.map((row) => ({ ...row, autoRenew: intToBool(Number(row.autoRenew)), status: row.status ?? 'active' }));
 }
 
 export async function saveSubscription(subscription: Subscription) {
   const db = await getDb();
   await db.runAsync(
-    `INSERT OR REPLACE INTO subscriptions (id, name, price, currency, billingCycle, nextPaymentDate, categoryId, icon, description, notifyDaysBefore, autoRenew, createdAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT OR REPLACE INTO subscriptions (id, name, price, currency, billingCycle, nextPaymentDate, categoryId, icon, description, notifyDaysBefore, autoRenew, status, paymentMethod, createdAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       subscription.id,
       subscription.name,
@@ -171,6 +196,8 @@ export async function saveSubscription(subscription: Subscription) {
       subscription.description ?? null,
       subscription.notifyDaysBefore,
       boolToInt(subscription.autoRenew),
+      subscription.status ?? 'active',
+      subscription.paymentMethod ?? null,
       subscription.createdAt,
     ],
   );
@@ -178,7 +205,35 @@ export async function saveSubscription(subscription: Subscription) {
 
 export async function deleteSubscription(id: string) {
   const db = await getDb();
+  await db.runAsync('DELETE FROM subscription_renewal_logs WHERE subscriptionId = ?', [id]);
   await db.runAsync('DELETE FROM subscriptions WHERE id = ?', [id]);
+}
+
+export async function listSubscriptionRenewalLogs() {
+  const db = await getDb();
+  return db.getAllAsync<SubscriptionRenewalLog>('SELECT * FROM subscription_renewal_logs ORDER BY paidAt DESC, createdAt DESC');
+}
+
+export async function saveSubscriptionRenewalLog(log: SubscriptionRenewalLog) {
+  const db = await getDb();
+  await db.runAsync(
+    `INSERT OR REPLACE INTO subscription_renewal_logs (id, subscriptionId, paidAt, amount, currency, nextPaymentDate, note, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [log.id, log.subscriptionId, log.paidAt, log.amount, log.currency, log.nextPaymentDate, log.note ?? null, log.createdAt],
+  );
+}
+
+export async function renewSubscription(subscription: Subscription) {
+  const nextPaymentDate = nextBillingDate(subscription.nextPaymentDate, subscription.billingCycle);
+  await saveSubscription({ ...subscription, nextPaymentDate, status: 'active' });
+  await saveSubscriptionRenewalLog({
+    id: createId('renewal'),
+    subscriptionId: subscription.id,
+    paidAt: todayISO(),
+    amount: subscription.price,
+    currency: subscription.currency,
+    nextPaymentDate,
+    createdAt: new Date().toISOString(),
+  });
 }
 
 export async function listItems() {
@@ -246,14 +301,15 @@ export async function saveSettings(settings: AppSettings) {
 }
 
 export async function exportSnapshot() {
-  const [categories, subscriptions, items, itemUsageLogs, settings] = await Promise.all([listCategories(), listSubscriptions(), listItems(), listItemUsageLogs(), getSettings()]);
-  return { version: 2, exportedAt: new Date().toISOString(), categories, subscriptions, items, itemUsageLogs, settings };
+  const [categories, subscriptions, subscriptionRenewalLogs, items, itemUsageLogs, settings] = await Promise.all([listCategories(), listSubscriptions(), listSubscriptionRenewalLogs(), listItems(), listItemUsageLogs(), getSettings()]);
+  return { version: 3, exportedAt: new Date().toISOString(), categories, subscriptions, subscriptionRenewalLogs, items, itemUsageLogs, settings };
 }
 
-export async function importSnapshot(payload: { categories?: Category[]; subscriptions?: Subscription[]; items?: Item[]; itemUsageLogs?: ItemUsageLog[]; settings?: AppSettings }) {
+export async function importSnapshot(payload: { categories?: Category[]; subscriptions?: Subscription[]; subscriptionRenewalLogs?: SubscriptionRenewalLog[]; items?: Item[]; itemUsageLogs?: ItemUsageLog[]; settings?: AppSettings }) {
   if (!isRecord(payload)) throw new Error('Invalid snapshot');
   if (Array.isArray(payload.categories)) for (const category of payload.categories.filter(validCategory)) await upsertCategory(category);
   if (Array.isArray(payload.subscriptions)) for (const subscription of payload.subscriptions.filter(validSubscription)) await saveSubscription(subscription);
+  if (Array.isArray(payload.subscriptionRenewalLogs)) for (const log of payload.subscriptionRenewalLogs.filter(validSubscriptionRenewalLog)) await saveSubscriptionRenewalLog(log);
   if (Array.isArray(payload.items)) for (const item of payload.items.filter(validItem)) await saveItem(item);
   if (Array.isArray(payload.itemUsageLogs)) for (const log of payload.itemUsageLogs.filter(validItemUsageLog)) await saveItemUsageLog(log);
   if (validSettings(payload.settings)) await saveSettings(payload.settings);

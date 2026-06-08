@@ -10,17 +10,34 @@ import { cycleLabel, daysUntil, money, monthlyCost } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
 import type { Subscription } from '@/types/domain';
 
+const statusLabel = {
+  active: '使用中',
+  paused: '已暂停',
+  cancelled: '已取消',
+};
+
 export default function SubscriptionsScreen() {
   const subscriptions = useAppStore((state) => state.subscriptions);
   const categories = useAppStore((state) => state.categories.filter((category) => category.module === 'subscription'));
   const addSubscription = useAppStore((state) => state.addSubscription);
   const updateSubscription = useAppStore((state) => state.updateSubscription);
+  const renewSubscription = useAppStore((state) => state.renewSubscription);
   const removeSubscription = useAppStore((state) => state.removeSubscription);
+  const renewalLogs = useAppStore((state) => state.subscriptionRenewalLogs);
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | undefined>();
   const [editing, setEditing] = useState<Subscription | undefined>();
 
   const categoryMap = useMemo(() => new Map(categories.map((category) => [category.id, category.name])), [categories]);
+  const renewalMap = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const log of renewalLogs) {
+      const logs = map.get(log.subscriptionId) ?? [];
+      if (logs.length < 2) logs.push(log.paidAt);
+      map.set(log.subscriptionId, logs);
+    }
+    return map;
+  }, [renewalLogs]);
 
   const filteredSubscriptions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -42,6 +59,7 @@ export default function SubscriptionsScreen() {
 
   const renderSubscription = useCallback(({ item: sub }: { item: Subscription }) => {
     const days = daysUntil(sub.nextPaymentDate);
+    const recentRenewals = renewalMap.get(sub.id)?.join('、');
     return (
       <Card className="mb-3">
         <View className="flex-row justify-between gap-4">
@@ -51,13 +69,15 @@ export default function SubscriptionsScreen() {
           </View>
           <View className="items-end">
             <Text className="text-lg font-black text-slate-950">{money(sub.price, sub.currency)}</Text>
-            <Pill className={days <= sub.notifyDaysBefore ? 'bg-rose-50 text-rose-700' : 'bg-blue-50 text-blue-700'}>
-              {days < 0 ? `已过期 ${Math.abs(days)} 天` : `${days} 天后`}
+            <Pill className={sub.status !== 'active' ? 'bg-slate-100 text-slate-600' : days <= sub.notifyDaysBefore ? 'bg-rose-50 text-rose-700' : 'bg-blue-50 text-blue-700'}>
+              {sub.status !== 'active' ? statusLabel[sub.status] : days < 0 ? `已过期 ${Math.abs(days)} 天` : `${days} 天后`}
             </Pill>
           </View>
         </View>
-        <Text className="mt-3 text-sm text-slate-500">折算月支出 {money(monthlyCost(sub.price, sub.billingCycle), sub.currency)} · 提前 {sub.notifyDaysBefore} 天提醒</Text>
+        <Text className="mt-3 text-sm text-slate-500">折算月支出 {money(monthlyCost(sub.price, sub.billingCycle), sub.currency)} · {sub.autoRenew ? '自动续费' : '手动确认'} · 提前 {sub.notifyDaysBefore} 天提醒</Text>
+        <Text className="mt-2 text-sm text-slate-400">付款方式：{sub.paymentMethod || '未记录'}{recentRenewals ? ` · 最近续费 ${recentRenewals}` : ''}</Text>
         <View className="mt-4 flex-row gap-2">
+          <Button size="sm" variant="default" onPress={() => renewSubscription(sub)}>已续费</Button>
           <Button size="sm" variant="secondary" onPress={() => setEditing(sub)}>编辑</Button>
           <Button
             size="sm"
@@ -72,7 +92,7 @@ export default function SubscriptionsScreen() {
         </View>
       </Card>
     );
-  }, [categoryName, removeSubscription]);
+  }, [categoryName, removeSubscription, renewalMap, renewSubscription]);
 
   const listHeader = useMemo(() => (
     <View>

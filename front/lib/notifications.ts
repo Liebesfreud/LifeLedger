@@ -30,7 +30,7 @@ export async function syncLocalReminders(subscriptions: Subscription[], items: I
 
   const now = new Date();
 
-  for (const subscription of subscriptions) {
+  for (const subscription of subscriptions.filter((item) => item.status === 'active')) {
     const reminderAt = subDays(parseISO(subscription.nextPaymentDate), subscription.notifyDaysBefore);
     if (!isAfter(reminderAt, now)) continue;
     await Notifications.scheduleNotificationAsync({

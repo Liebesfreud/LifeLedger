@@ -1,5 +1,5 @@
 import { clsx, type ClassValue } from 'clsx';
-import { format, differenceInCalendarDays, parseISO, isValid } from 'date-fns';
+import { format, differenceInCalendarDays, parseISO, isValid, addMonths, addWeeks, addYears } from 'date-fns';
 import { twMerge } from 'tailwind-merge';
 import type { BillingCycle, Currency } from '@/types/domain';
 
@@ -68,4 +68,12 @@ export function monthlyCost(price: number, cycle: BillingCycle) {
 
 export function annualCost(price: number, cycle: BillingCycle) {
   return monthlyCost(price, cycle) * 12;
+}
+
+export function nextBillingDate(value: string, cycle: BillingCycle) {
+  const date = parseISO(value);
+  if (cycle === 'weekly') return format(addWeeks(date, 1), 'yyyy-MM-dd');
+  if (cycle === 'quarterly') return format(addMonths(date, 3), 'yyyy-MM-dd');
+  if (cycle === 'yearly') return format(addYears(date, 1), 'yyyy-MM-dd');
+  return format(addMonths(date, 1), 'yyyy-MM-dd');
 }
