@@ -1,67 +1,39 @@
-# SubTrack Frontend
+# SubTrack Mobile
 
-React-based frontend for the SubTrack subscription management application.
+SubTrack Mobile 是使用 Expo + React Native + NativeWind 重构的 Android 优先本地应用，聚焦两个核心场景：
 
-## Tech Stack
+- 订阅管理：记录长期扣款、续费日期、周期、提醒天数和月度/年度支出。
+- 物品管理：记录资产购入价、位置、使用次数、闲置天数和单次使用成本。
 
-- **React 18** - UI framework
-- **TypeScript** - Type safety
-- **Vite** - Build tool
-- **Recharts** - Charts and analytics
-- **Lucide React** - Icons
+## 技术栈
 
-## Development
+- Expo Router 文件路由
+- React Native + TypeScript
+- React Native Reusables 风格 UI 组件（NativeWind、CVA、tailwind-merge）
+- expo-sqlite 本地数据库
+- Zustand 状态管理
+- expo-notifications 通知权限
+- expo-file-system + expo-document-picker 导入导出
 
-### Prerequisites
-
-- Node.js 18+
-- npm or yarn
-
-### Setup
+## 开发
 
 ```bash
-# Install dependencies
+cd front
 npm install
-
-# Create environment file
-echo "VITE_API_BASE=http://localhost:8080" > .env.local
-
-# Start development server
-npm run dev
+npm run start
+npm run android
 ```
 
-### Build
+## 验证
 
 ```bash
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
+npm run typecheck
+npm run lint
 ```
 
-## Project Structure
+## Android 构建
 
+```bash
+cd front
+npx eas build -p android --profile preview
 ```
-front/
-├── App.tsx           # Main app component with routing
-├── components/       # React components
-│   ├── Dashboard.tsx     # Dashboard view
-│   ├── Settings.tsx      # Settings page
-│   └── SubscriptionList.tsx  # Subscription management
-├── services/         # API services
-│   └── storageService.ts # API client
-├── types.ts          # TypeScript type definitions
-├── constants.ts      # App constants and translations
-└── index.tsx         # Entry point
-```
-
-## Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `VITE_API_BASE` | Backend API URL | `http://localhost:8080` |
-
-## License
-
-MIT - See [LICENSE](../LICENSE) for details.

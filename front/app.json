@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "SubTrack",
+    "slug": "subtrack-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "subtrack",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "android": {
+      "package": "com.liebesfreud.subtrack",
+      "adaptiveIcon": {
+        "backgroundColor": "#111827"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-notifications",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

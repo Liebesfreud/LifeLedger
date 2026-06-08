@@ -1,0 +1,96 @@
+import { create } from 'zustand';
+import type { AppSettings, Category, Item, Subscription } from '@/types/domain';
+import { annualCost, createId, daysUntil, monthlyCost, todayISO } from '@/lib/utils';
+import * as repo from '@/lib/db';
+
+type AppState = {
+  ready: boolean;
+  categories: Category[];
+  subscriptions: Subscription[];
+  items: Item[];
+  settings: AppSettings;
+  initialize: () => Promise<void>;
+  addSubscription: (input: Omit<Subscription, 'id' | 'createdAt'>) => Promise<void>;
+  updateSubscription: (subscription: Subscription) => Promise<void>;
+  removeSubscription: (id: string) => Promise<void>;
+  addItem: (input: Omit<Item, 'id' | 'createdAt' | 'usageCount'> & { usageCount?: number }) => Promise<void>;
+  updateItem: (item: Item) => Promise<void>;
+  removeItem: (id: string) => Promise<void>;
+  markUsed: (item: Item) => Promise<void>;
+  updateSettings: (settings: AppSettings) => Promise<void>;
+};
+
+const initialSettings: AppSettings = {
+  baseCurrency: 'CNY',
+  monthlyBudget: 500,
+  itemIdleAlertDays: 45,
+  notificationEnabled: true,
+};
+
+async function refresh(set: (state: Partial<AppState>) => void) {
+  const [categories, subscriptions, items, settings] = await Promise.all([
+    repo.listCategories(),
+    repo.listSubscriptions(),
+    repo.listItems(),
+    repo.getSettings(),
+  ]);
+  set({ categories, subscriptions, items, settings, ready: true });
+}
+
+export const useAppStore = create<AppState>((set) => ({
+  ready: false,
+  categories: [],
+  subscriptions: [],
+  items: [],
+  settings: initialSettings,
+  initialize: async () => {
+    await repo.migrateDatabase();
+    await refresh(set);
+  },
+  addSubscription: async (input) => {
+    await repo.saveSubscription({ ...input, id: createId('sub'), createdAt: new Date().toISOString() });
+    await refresh(set);
+  },
+  updateSubscription: async (subscription) => {
+    await repo.saveSubscription(subscription);
+    await refresh(set);
+  },
+  removeSubscription: async (id) => {
+    await repo.deleteSubscription(id);
+    await refresh(set);
+  },
+  addItem: async (input) => {
+    await repo.saveItem({ ...input, id: createId('item'), usageCount: input.usageCount ?? 0, createdAt: new Date().toISOString() });
+    await refresh(set);
+  },
+  updateItem: async (item) => {
+    await repo.saveItem(item);
+    await refresh(set);
+  },
+  removeItem: async (id) => {
+    await repo.deleteItem(id);
+    await refresh(set);
+  },
+  markUsed: async (item) => {
+    await repo.markItemUsed(item);
+    await refresh(set);
+  },
+  updateSettings: async (settings) => {
+    await repo.saveSettings(settings);
+    await refresh(set);
+  },
+}));
+
+export function selectDashboardData(state: AppState) {
+  const monthlySpend = state.subscriptions.reduce((sum, sub) => sum + monthlyCost(sub.price, sub.billingCycle), 0);
+  const annualSpend = state.subscriptions.reduce((sum, sub) => sum + annualCost(sub.price, sub.billingCycle), 0);
+  const dueSoon = state.subscriptions.filter((sub) => daysUntil(sub.nextPaymentDate) <= sub.notifyDaysBefore).length;
+  const idleItems = state.items.filter((item) => {
+    const reference = item.lastUsedAt || item.purchaseDate;
+    return daysUntil(reference) < -item.idleAlertDays;
+  }).length;
+  const itemValue = state.items.reduce((sum, item) => sum + item.purchasePrice, 0);
+  const longTermScore = Math.max(1, Math.min(99, Math.round(100 - monthlySpend / Math.max(state.settings.monthlyBudget, 1) * 35 - idleItems * 8 + state.items.length * 2)));
+
+  return { monthlySpend, annualSpend, dueSoon, idleItems, itemValue, longTermScore };
+}
