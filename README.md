@@ -1,6 +1,6 @@
 # SubTrack
 
-SubTrack 正在从 Web 订阅管理工具重构为 **Expo + React Native Android App**。新版本采用本地优先架构，核心功能是订阅管理与物品管理，并逐步扩展为长期主义生活管理工具。
+SubTrack 是一个使用 **Expo + React Native** 构建的 Android 优先本地应用。它采用本地优先架构，核心功能是订阅管理与物品管理，并逐步扩展为长期主义生活管理工具。
 
 ## 当前移动端能力
 
@@ -68,6 +68,6 @@ front/
   lib/              SQLite 与工具函数
   store/            Zustand 应用状态
   types/            领域类型
-server/             旧 Go 后端，迁移期间暂保留
-contracts/          旧 API 契约，迁移期间暂保留
 ```
+
+> 旧 Go 后端、Vite Web 前端、Docker 部署和 OpenAPI 契约已在移动端重构中移除；当前项目以 `front/` Expo App 为唯一交付物。

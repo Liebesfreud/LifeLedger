@@ -1,15 +1,4 @@
-# Compiled binaries
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-
-# Go build cache
-server/.gocache/
-
 # Database files
-server/data/
 *.db
 *.db-journal
 
