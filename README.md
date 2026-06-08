@@ -68,6 +68,8 @@ front/
   lib/              SQLite 与工具函数
   store/            Zustand 应用状态
   types/            领域类型
+docs/
+  ANDROID_QA.md     Android 交付验证记录
 ```
 
 > 旧 Go 后端、Vite Web 前端、Docker 部署和 OpenAPI 契约已在移动端重构中移除；当前项目以 `front/` Expo App 为唯一交付物。
