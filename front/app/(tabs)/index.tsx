@@ -12,6 +12,8 @@ export default function DashboardScreen() {
   const idleItems = state.items
     .filter((item) => item.usageCount === 0 || item.condition === 'idle')
     .slice(0, 3);
+  const recentUsageLogs = state.itemUsageLogs.slice(0, 4);
+  const itemName = (id: string) => state.items.find((item) => item.id === id)?.name ?? '未知物品';
 
   return (
     <Screen title="长期生活仪表盘" subtitle="订阅支出、资产使用和长期主义指数一屏掌握">
@@ -27,6 +29,7 @@ export default function DashboardScreen() {
         <MetricCard title="本月订阅" value={money(data.monthlySpend)} caption={`预算 ${money(state.settings.monthlyBudget)}`} tone="blue" />
         <MetricCard title="年度支出" value={money(data.annualSpend)} caption={`${state.subscriptions.length} 项订阅`} tone="amber" />
         <MetricCard title="物品总值" value={money(data.itemValue)} caption={`${state.items.length} 件物品`} tone="green" />
+        <MetricCard title="本月使用" value={`${data.usedThisMonth}`} caption="记录的真实使用" tone="green" />
         <MetricCard title="需关注" value={`${data.dueSoon + data.idleItems}`} caption="续费/闲置提醒" tone="rose" />
       </View>
 
@@ -45,7 +48,7 @@ export default function DashboardScreen() {
         ))}
       </Card>
 
-      <Card>
+      <Card className="mb-4">
         <Text className="mb-3 text-lg font-black text-slate-950">闲置资产雷达</Text>
         {idleItems.length === 0 ? (
           <Text className="text-slate-500">目前没有明显闲置物品，继续保持。</Text>
@@ -56,6 +59,21 @@ export default function DashboardScreen() {
               <Text className="text-sm text-slate-500">{item.location} · 已使用 {item.usageCount} 次</Text>
             </View>
             <Text className="font-black text-slate-950">{money(item.purchasePrice, item.currency)}</Text>
+          </View>
+        ))}
+      </Card>
+
+      <Card>
+        <Text className="mb-3 text-lg font-black text-slate-950">最近使用记录</Text>
+        {recentUsageLogs.length === 0 ? (
+          <Text className="text-slate-500">还没有使用记录，去物品页点一次“记录使用”。</Text>
+        ) : recentUsageLogs.map((log) => (
+          <View key={log.id} className="mb-3 flex-row items-center justify-between last:mb-0">
+            <View>
+              <Text className="font-bold text-slate-900">{itemName(log.itemId)}</Text>
+              <Text className="text-sm text-slate-500">使用日期 {log.usedAt}</Text>
+            </View>
+            <Text className="font-black text-emerald-600">+1</Text>
           </View>
         ))}
       </Card>

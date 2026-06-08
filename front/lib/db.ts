@@ -1,5 +1,5 @@
 import * as SQLite from 'expo-sqlite';
-import type { Category, Item, Subscription, AppSettings } from '@/types/domain';
+import type { Category, Item, ItemUsageLog, Subscription, AppSettings } from '@/types/domain';
 import { createId, todayISO } from '@/lib/utils';
 
 const DB_NAME = 'subtrack_mobile.db';
@@ -62,6 +62,13 @@ export async function migrateDatabase() {
       usageCount INTEGER NOT NULL,
       lastUsedAt TEXT,
       idleAlertDays INTEGER NOT NULL,
+      note TEXT,
+      createdAt TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS item_usage_logs (
+      id TEXT PRIMARY KEY NOT NULL,
+      itemId TEXT NOT NULL,
+      usedAt TEXT NOT NULL,
       note TEXT,
       createdAt TEXT NOT NULL
     );
@@ -172,11 +179,27 @@ export async function saveItem(item: Item) {
 
 export async function deleteItem(id: string) {
   const db = await getDb();
+  await db.runAsync('DELETE FROM item_usage_logs WHERE itemId = ?', [id]);
   await db.runAsync('DELETE FROM items WHERE id = ?', [id]);
 }
 
 export async function markItemUsed(item: Item) {
-  await saveItem({ ...item, usageCount: item.usageCount + 1, lastUsedAt: todayISO(), condition: item.condition === 'idle' ? 'used' : item.condition });
+  const usedAt = todayISO();
+  await saveItem({ ...item, usageCount: item.usageCount + 1, lastUsedAt: usedAt, condition: item.condition === 'idle' ? 'used' : item.condition });
+  await saveItemUsageLog({ id: createId('usage'), itemId: item.id, usedAt, createdAt: new Date().toISOString() });
+}
+
+export async function listItemUsageLogs() {
+  const db = await getDb();
+  return db.getAllAsync<ItemUsageLog>('SELECT * FROM item_usage_logs ORDER BY usedAt DESC, createdAt DESC');
+}
+
+export async function saveItemUsageLog(log: ItemUsageLog) {
+  const db = await getDb();
+  await db.runAsync(
+    `INSERT OR REPLACE INTO item_usage_logs (id, itemId, usedAt, note, createdAt) VALUES (?, ?, ?, ?, ?)`,
+    [log.id, log.itemId, log.usedAt, log.note ?? null, log.createdAt],
+  );
 }
 
 export async function getSettings() {
@@ -191,13 +214,14 @@ export async function saveSettings(settings: AppSettings) {
 }
 
 export async function exportSnapshot() {
-  const [categories, subscriptions, items, settings] = await Promise.all([listCategories(), listSubscriptions(), listItems(), getSettings()]);
-  return { version: 1, exportedAt: new Date().toISOString(), categories, subscriptions, items, settings };
+  const [categories, subscriptions, items, itemUsageLogs, settings] = await Promise.all([listCategories(), listSubscriptions(), listItems(), listItemUsageLogs(), getSettings()]);
+  return { version: 2, exportedAt: new Date().toISOString(), categories, subscriptions, items, itemUsageLogs, settings };
 }
 
-export async function importSnapshot(payload: { categories?: Category[]; subscriptions?: Subscription[]; items?: Item[]; settings?: AppSettings }) {
+export async function importSnapshot(payload: { categories?: Category[]; subscriptions?: Subscription[]; items?: Item[]; itemUsageLogs?: ItemUsageLog[]; settings?: AppSettings }) {
   if (payload.categories) for (const category of payload.categories) await upsertCategory(category);
   if (payload.subscriptions) for (const subscription of payload.subscriptions) await saveSubscription(subscription);
   if (payload.items) for (const item of payload.items) await saveItem(item);
+  if (payload.itemUsageLogs) for (const log of payload.itemUsageLogs) await saveItemUsageLog(log);
   if (payload.settings) await saveSettings(payload.settings);
 }

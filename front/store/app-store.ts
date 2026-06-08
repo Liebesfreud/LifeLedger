@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { AppSettings, Category, Item, Subscription } from '@/types/domain';
+import type { AppSettings, Category, Item, ItemUsageLog, Subscription } from '@/types/domain';
 import { annualCost, createId, daysUntil, monthlyCost, todayISO } from '@/lib/utils';
 import * as repo from '@/lib/db';
 import { syncLocalReminders } from '@/lib/notifications';
@@ -9,6 +9,7 @@ type AppState = {
   categories: Category[];
   subscriptions: Subscription[];
   items: Item[];
+  itemUsageLogs: ItemUsageLog[];
   settings: AppSettings;
   initialize: () => Promise<void>;
   addSubscription: (input: Omit<Subscription, 'id' | 'createdAt'>) => Promise<void>;
@@ -31,13 +32,14 @@ const initialSettings: AppSettings = {
 };
 
 async function refresh(set: (state: Partial<AppState>) => void) {
-  const [categories, subscriptions, items, settings] = await Promise.all([
+  const [categories, subscriptions, items, itemUsageLogs, settings] = await Promise.all([
     repo.listCategories(),
     repo.listSubscriptions(),
     repo.listItems(),
+    repo.listItemUsageLogs(),
     repo.getSettings(),
   ]);
-  set({ categories, subscriptions, items, settings, ready: true });
+  set({ categories, subscriptions, items, itemUsageLogs, settings, ready: true });
   await syncLocalReminders(subscriptions, items, settings).catch((error) => console.warn('Reminder sync skipped', error));
 }
 
@@ -46,6 +48,7 @@ export const useAppStore = create<AppState>((set) => ({
   categories: [],
   subscriptions: [],
   items: [],
+  itemUsageLogs: [],
   settings: initialSettings,
   initialize: async () => {
     await repo.migrateDatabase();
@@ -102,7 +105,8 @@ export function selectDashboardData(state: AppState) {
     return daysUntil(reference) < -item.idleAlertDays;
   }).length;
   const itemValue = state.items.reduce((sum, item) => sum + item.purchasePrice, 0);
-  const longTermScore = Math.max(1, Math.min(99, Math.round(100 - monthlySpend / Math.max(state.settings.monthlyBudget, 1) * 35 - idleItems * 8 + state.items.length * 2)));
+  const usedThisMonth = state.itemUsageLogs.filter((log) => log.usedAt.slice(0, 7) === new Date().toISOString().slice(0, 7)).length;
+  const longTermScore = Math.max(1, Math.min(99, Math.round(100 - monthlySpend / Math.max(state.settings.monthlyBudget, 1) * 35 - idleItems * 8 + Math.min(usedThisMonth, 12) * 2)));
 
-  return { monthlySpend, annualSpend, dueSoon, idleItems, itemValue, longTermScore };
+  return { monthlySpend, annualSpend, dueSoon, idleItems, itemValue, usedThisMonth, longTermScore };
 }

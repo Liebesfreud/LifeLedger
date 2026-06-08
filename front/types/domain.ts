@@ -41,6 +41,14 @@ export type Item = {
   createdAt: string;
 };
 
+export type ItemUsageLog = {
+  id: string;
+  itemId: string;
+  usedAt: string;
+  note?: string;
+  createdAt: string;
+};
+
 export type AppSettings = {
   baseCurrency: Currency;
   monthlyBudget: number;
