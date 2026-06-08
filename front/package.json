@@ -8,7 +8,11 @@
     "android": "expo run:android",
     "web": "expo start --web",
     "lint": "expo lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "doctor": "npx expo-doctor",
+    "validate": "npm run typecheck && npm run doctor",
+    "export:android": "expo export --platform android --output-dir dist/android",
+    "build:android:preview": "eas build -p android --profile preview"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.4",

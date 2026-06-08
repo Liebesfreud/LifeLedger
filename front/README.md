@@ -28,13 +28,13 @@ npm run android
 ## 验证
 
 ```bash
-npm run typecheck
-npm run lint
+npm run validate
+npm run export:android
 ```
 
 ## Android 构建
 
 ```bash
 cd front
-npx eas build -p android --profile preview
+npm run build:android:preview
 ```

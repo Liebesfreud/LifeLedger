@@ -44,6 +44,21 @@ cd front
 npm run typecheck
 ```
 
+完整移动端校验：
+
+```bash
+cd front
+npm run validate
+npm run export:android
+```
+
+生成 Android 预览 APK：
+
+```bash
+cd front
+npm run build:android:preview
+```
+
 ## 目录
 
 ```text
