@@ -71,6 +71,7 @@ front/
   types/            领域类型
 docs/
   ANDROID_QA.md     Android 交付验证记录
+  QUALITY_AUDIT.md  性能、UI、数据结构全盘审计
 ```
 
 > 旧 Go 后端、Vite Web 前端、Docker 部署和 OpenAPI 契约已在移动端重构中移除；当前项目以 `front/` Expo App 为唯一交付物。

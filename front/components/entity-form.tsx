@@ -1,8 +1,10 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
-import { Alert, Image, Text, View } from 'react-native';
+import { Alert, Image, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ChoiceGroup } from '@/components/ui/choice-group';
+import { Label, Title } from '@/components/ui/typography';
 import { isISODate, parseNonNegativeNumber, parsePositiveInteger } from '@/lib/utils';
 import type { BillingCycle, Category, Currency, Item, ItemCondition, Subscription, SubscriptionStatus } from '@/types/domain';
 
@@ -13,18 +15,6 @@ const conditions: ItemCondition[] = ['new', 'good', 'used', 'idle', 'retired'];
 
 type SubscriptionInput = Omit<Subscription, 'id' | 'createdAt'>;
 type ItemInput = Omit<Item, 'id' | 'createdAt'>;
-
-function ChoiceRow<T extends string>({ values, value, onChange, labels }: { values: T[]; value?: T; onChange: (value: T) => void; labels?: Partial<Record<T, string>> }) {
-  return (
-    <View className="flex-row flex-wrap gap-2">
-      {values.map((item) => (
-        <Button key={item} size="sm" variant={item === value ? 'default' : 'secondary'} onPress={() => onChange(item)}>
-          {labels?.[item] ?? item}
-        </Button>
-      ))}
-    </View>
-  );
-}
 
 function CategoryChoice({ categories, value, onChange }: { categories: Category[]; value?: string; onChange: (value?: string) => void }) {
   return (
@@ -95,19 +85,19 @@ export function SubscriptionForm({
 
   return (
     <View className="gap-3">
-      <Text className="text-lg font-black text-slate-950 dark:text-slate-50">{initialValue ? '编辑订阅' : '新增订阅'}</Text>
+      <Title>{initialValue ? '编辑订阅' : '新增订阅'}</Title>
       <Input placeholder="名称，例如 ChatGPT" value={name} onChangeText={setName} />
       <View className="flex-row gap-3">
         <Input className="flex-1" placeholder="价格" keyboardType="decimal-pad" value={price} onChangeText={setPrice} />
         <Input className="w-20" placeholder="图标" value={icon} onChangeText={setIcon} />
       </View>
-      <ChoiceRow values={currencies} value={currency} onChange={setCurrency} />
-      <ChoiceRow values={cycles} value={billingCycle} onChange={setBillingCycle} labels={{ monthly: '每月', yearly: '每年', quarterly: '每季', weekly: '每周' }} />
-      <Text className="font-semibold text-slate-700 dark:text-slate-300">状态</Text>
-      <ChoiceRow values={subscriptionStatuses} value={status} onChange={setStatus} labels={{ active: '使用中', paused: '已暂停', cancelled: '已取消' }} />
-      <Text className="font-semibold text-slate-700 dark:text-slate-300">续费方式</Text>
-      <ChoiceRow values={['auto', 'manual'] as const} value={autoRenew ? 'auto' : 'manual'} onChange={(value) => setAutoRenew(value === 'auto')} labels={{ auto: '自动续费', manual: '手动确认' }} />
-      <Text className="font-semibold text-slate-700 dark:text-slate-300">分类</Text>
+      <ChoiceGroup values={currencies} value={currency} onChange={setCurrency} />
+      <ChoiceGroup values={cycles} value={billingCycle} onChange={setBillingCycle} labels={{ monthly: '每月', yearly: '每年', quarterly: '每季', weekly: '每周' }} />
+      <Label>状态</Label>
+      <ChoiceGroup values={subscriptionStatuses} value={status} onChange={setStatus} labels={{ active: '使用中', paused: '已暂停', cancelled: '已取消' }} />
+      <Label>续费方式</Label>
+      <ChoiceGroup values={['auto', 'manual'] as const} value={autoRenew ? 'auto' : 'manual'} onChange={(value) => setAutoRenew(value === 'auto')} labels={{ auto: '自动续费', manual: '手动确认' }} />
+      <Label>分类</Label>
       <CategoryChoice categories={categories} value={categoryId} onChange={setCategoryId} />
       <Input placeholder="付款方式，例如 招商银行 / PayPal / App Store" value={paymentMethod} onChangeText={setPaymentMethod} />
       <Input placeholder="下次付款日期 YYYY-MM-DD" value={nextPaymentDate} onChangeText={setNextPaymentDate} />
@@ -211,12 +201,12 @@ export function ItemForm({
 
   return (
     <View className="gap-3">
-      <Text className="text-lg font-black text-slate-950 dark:text-slate-50">{initialValue ? '编辑物品' : '新增物品'}</Text>
+      <Title>{initialValue ? '编辑物品' : '新增物品'}</Title>
       <Input placeholder="名称，例如 Kindle" value={name} onChangeText={setName} />
       <Input placeholder="购入价" keyboardType="decimal-pad" value={purchasePrice} onChangeText={setPurchasePrice} />
-      <ChoiceRow values={currencies} value={currency} onChange={setCurrency} />
-      <ChoiceRow values={conditions} value={condition} onChange={setCondition} labels={{ new: '全新', good: '良好', used: '常用', idle: '闲置', retired: '退役' }} />
-      <Text className="font-semibold text-slate-700 dark:text-slate-300">分类</Text>
+      <ChoiceGroup values={currencies} value={currency} onChange={setCurrency} />
+      <ChoiceGroup values={conditions} value={condition} onChange={setCondition} labels={{ new: '全新', good: '良好', used: '常用', idle: '闲置', retired: '退役' }} />
+      <Label>分类</Label>
       <CategoryChoice categories={categories} value={categoryId} onChange={setCategoryId} />
       <Input placeholder="购入日期 YYYY-MM-DD" value={purchaseDate} onChangeText={setPurchaseDate} />
       <Input placeholder="存放位置" value={location} onChangeText={setLocation} />
