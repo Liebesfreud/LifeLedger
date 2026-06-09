@@ -5,8 +5,8 @@
 ## 当前结论
 
 - 性能：已使用 `FlatList` 虚拟化，补充批处理参数、裁剪参数、首页精确 selector、SQLite 索引和通知同步签名去重。
-- 底部 Dock：已从默认 TabBar 升级为浮动圆角 Dock，包含边框、阴影、安全区底部间距和暗色适配。
-- UI 组件：已有 `Button`、`Card`、`Input`、`Sheet`、`EmptyState`、`MetricCard`、`InsightCard`，并新增 `AppText`、`Label`、`Title`、`Badge`、`SectionHeader`、`ChoiceGroup` 基元。
+- 底部 Dock：已从默认 TabBar 升级为浮动圆角 Dock，包含边框、阴影、动态安全区底部间距、暗色适配和标签页无障碍描述。
+- UI 组件：已有 `Button`、`Card`、`Input`、`Sheet`、`EmptyState`、`MetricCard`、`InsightCard`，并新增 `AppText`、`Label`、`Title`、`Badge`、`SectionHeader`、`ChoiceGroup` 基元；设置页已迁移到统一文本和选择组件。
 - 数据结构：订阅、续费日志、物品、使用日志、分类、设置均有 SQLite 表；支持导入导出、迁移、索引和基础 schema 防御。
 - 设计：应用图标、启动页、主题模式、暗色基础适配、底部 Dock 和产品化仪表盘已具备统一方向。
 - 功能：订阅管理和物品管理均覆盖新增、编辑、删除、搜索、筛选、提醒和历史记录；设置支持主题、分类、通知、导入导出。
@@ -20,12 +20,14 @@
 - 长列表补充 Android 裁剪和批处理参数。
 - 物品复杂行已拆分为 `React.memo` 组件，降低展开详情时的整表重渲染成本。
 - 导入快照校验已收紧枚举、日期和非负数规则，并使用事务降低半导入风险。
+- 导出分享不再把完整 JSON 塞进消息正文，改为生成备份文件后分享。
 - Sheet 内表单去掉卡片套卡片。
 - 业务组件补充核心暗色样式。
+- 基础按钮、Sheet 关闭按钮、Dock 标签页和首页可点击卡片已补充无障碍语义。
 
 ## 后续可选优化
 
 - 对超大使用日志做分页/按需加载。
 - 选择物品照片后生成缩略图字段，减少长列表图片内存压力。
-- 继续用 `AppText`、`Badge`、`SectionHeader` 替换页面内剩余手写样式。
-- 增加无障碍标签和更完整的 Android 真机 QA。
+- 继续用 `AppText`、`Badge`、`SectionHeader` 替换其他页面内剩余手写样式。
+- 增加更完整的 Android 真机 QA。

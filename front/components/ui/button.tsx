@@ -44,6 +44,7 @@ export function Button({ children, className, variant = 'default', size = 'defau
     <Pressable
       className={cn(buttonVariants({ variant, size }), disabled && 'opacity-50', className)}
       disabled={disabled}
+      accessibilityRole="button"
       {...props}
     >
       <Text className={cn(textVariants({ variant }))}>{children}</Text>

@@ -102,10 +102,10 @@ export default function DashboardScreen() {
         ))}
       </View>
 
-      <Pressable onPress={() => router.push('/subscriptions')} className="active:opacity-80">
+      <Pressable onPress={() => router.push('/subscriptions')} className="active:opacity-80" accessibilityRole="button" accessibilityLabel="查看全部即将处理的订阅">
         <Card className="mb-4">
           <View className="mb-3 flex-row items-center justify-between">
-            <Text className="text-lg font-black text-slate-950 dark:text-slate-50 dark:text-slate-50">即将处理的订阅</Text>
+            <Text className="text-lg font-black text-slate-950 dark:text-slate-50">即将处理的订阅</Text>
             <Text className="text-sm font-bold text-blue-600">查看全部</Text>
           </View>
           {dueSubscriptions.length === 0 ? (
@@ -122,10 +122,10 @@ export default function DashboardScreen() {
         </Card>
       </Pressable>
 
-      <Pressable onPress={() => router.push('/items')} className="active:opacity-80">
+      <Pressable onPress={() => router.push('/items')} className="active:opacity-80" accessibilityRole="button" accessibilityLabel="查看全部闲置资产">
         <Card className="mb-4">
           <View className="mb-3 flex-row items-center justify-between">
-            <Text className="text-lg font-black text-slate-950 dark:text-slate-50 dark:text-slate-50">闲置资产雷达</Text>
+            <Text className="text-lg font-black text-slate-950 dark:text-slate-50">闲置资产雷达</Text>
             <Text className="text-sm font-bold text-blue-600">查看全部</Text>
           </View>
           {idleItems.length === 0 ? (
@@ -142,10 +142,10 @@ export default function DashboardScreen() {
         </Card>
       </Pressable>
 
-      <Pressable onPress={() => router.push('/items')} className="active:opacity-80">
+      <Pressable onPress={() => router.push('/items')} className="active:opacity-80" accessibilityRole="button" accessibilityLabel="前往物品页记录使用">
         <Card>
           <View className="mb-3 flex-row items-center justify-between">
-            <Text className="text-lg font-black text-slate-950 dark:text-slate-50 dark:text-slate-50">最近使用记录</Text>
+            <Text className="text-lg font-black text-slate-950 dark:text-slate-50">最近使用记录</Text>
             <Text className="text-sm font-bold text-blue-600">去记录</Text>
           </View>
           {recentUsageLogs.length === 0 ? (

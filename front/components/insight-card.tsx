@@ -36,7 +36,7 @@ export function InsightCard({
 }) {
   const styles = toneStyles[tone];
   return (
-    <Pressable onPress={onPress} className="mb-3 active:opacity-80">
+    <Pressable onPress={onPress} className="mb-3 active:opacity-80" accessibilityRole="button" accessibilityLabel={`${title}，${action}`}>
       <Card>
         <View className="flex-row items-start gap-3">
           <View className={cn('mt-1 h-3 w-3 rounded-full', styles.dot)} />

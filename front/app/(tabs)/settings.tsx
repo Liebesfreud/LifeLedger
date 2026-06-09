@@ -2,22 +2,23 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import * as Notifications from 'expo-notifications';
 import { useState } from 'react';
-import { Alert, Share, Switch, Text, View } from 'react-native';
+import { Alert, Share, Switch, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { ChoiceGroup } from '@/components/ui/choice-group';
 import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
+import { AppText, Label, Title } from '@/components/ui/typography';
 import { exportSnapshot, importSnapshot } from '@/lib/db';
 import { useAppStore } from '@/store/app-store';
 import type { Category, Currency, ThemeMode } from '@/types/domain';
 
 const currencies: Currency[] = ['CNY', 'USD', 'EUR', 'GBP', 'JPY'];
 const categoryColors = ['#2563EB', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444'];
-const themeModes: Array<{ value: ThemeMode; label: string }> = [
-  { value: 'system', label: '跟随系统' },
-  { value: 'light', label: '浅色' },
-  { value: 'dark', label: '深色' },
-];
+const themeModes: ThemeMode[] = ['system', 'light', 'dark'];
+const themeModeLabels: Record<ThemeMode, string> = { system: '跟随系统', light: '浅色', dark: '深色' };
+const categoryModules: Array<Category['module']> = ['subscription', 'item'];
+const categoryModuleLabels: Record<Category['module'], string> = { subscription: '订阅分类', item: '物品分类' };
 
 export default function SettingsScreen() {
   const settings = useAppStore((state) => state.settings);
@@ -33,10 +34,12 @@ export default function SettingsScreen() {
   const [categoryColor, setCategoryColor] = useState(categoryColors[0]);
 
   const save = async () => {
+    const monthlyBudget = Number(budget);
+    const itemIdleAlertDays = Number(idleDays);
     await updateSettings({
       ...settings,
-      monthlyBudget: Number(budget) || 0,
-      itemIdleAlertDays: Number(idleDays) || 1,
+      monthlyBudget: Number.isFinite(monthlyBudget) ? Math.max(0, monthlyBudget) : 0,
+      itemIdleAlertDays: Number.isFinite(itemIdleAlertDays) ? Math.max(1, Math.floor(itemIdleAlertDays)) : 1,
     });
     Alert.alert('已保存', '设置已更新');
   };
@@ -50,10 +53,16 @@ export default function SettingsScreen() {
   };
 
   const exportData = async () => {
-    const snapshot = await exportSnapshot();
-    const path = `${FileSystem.cacheDirectory}subtrack-export-${Date.now()}.json`;
-    await FileSystem.writeAsStringAsync(path, JSON.stringify(snapshot, null, 2));
-    await Share.share({ url: path, message: JSON.stringify(snapshot) });
+    try {
+      const directory = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
+      if (!directory) throw new Error('missing export directory');
+      const snapshot = await exportSnapshot();
+      const path = `${directory}subtrack-export-${Date.now()}.json`;
+      await FileSystem.writeAsStringAsync(path, JSON.stringify(snapshot, null, 2));
+      await Share.share({ url: path, title: 'SubTrack 数据备份', message: 'SubTrack 数据备份文件' });
+    } catch {
+      Alert.alert('导出失败', '无法生成备份文件，请稍后再试。');
+    }
   };
 
   const importData = async () => {
@@ -80,47 +89,32 @@ export default function SettingsScreen() {
   return (
     <Screen title="设置" subtitle="本地优先、可导入导出、可申请 Android 通知权限">
       <Card className="mb-4 gap-3">
-        <Text className="text-lg font-black text-slate-950">偏好设置</Text>
-        <Text className="font-semibold text-slate-700">主题模式</Text>
-        <View className="flex-row flex-wrap gap-2">
-          {themeModes.map((mode) => (
-            <Button key={mode.value} size="sm" variant={settings.themeMode === mode.value ? 'default' : 'secondary'} onPress={() => updateSettings({ ...settings, themeMode: mode.value })}>
-              {mode.label}
-            </Button>
-          ))}
-        </View>
-        <Text className="font-semibold text-slate-700">基础币种</Text>
-        <View className="flex-row flex-wrap gap-2">
-          {currencies.map((currency) => (
-            <Button key={currency} size="sm" variant={settings.baseCurrency === currency ? 'default' : 'secondary'} onPress={() => updateSettings({ ...settings, baseCurrency: currency })}>
-              {currency}
-            </Button>
-          ))}
-        </View>
-        <Text className="font-semibold text-slate-700">月度订阅预算</Text>
-        <Input keyboardType="decimal-pad" value={budget} onChangeText={setBudget} />
-        <Text className="font-semibold text-slate-700">默认物品闲置提醒天数</Text>
-        <Input keyboardType="number-pad" value={idleDays} onChangeText={setIdleDays} />
-        <View className="flex-row items-center justify-between rounded-2xl bg-slate-50 p-3">
+        <Title>偏好设置</Title>
+        <Label>主题模式</Label>
+        <ChoiceGroup values={themeModes} value={settings.themeMode} labels={themeModeLabels} onChange={(themeMode) => updateSettings({ ...settings, themeMode })} />
+        <Label>基础币种</Label>
+        <ChoiceGroup values={currencies} value={settings.baseCurrency} onChange={(baseCurrency) => updateSettings({ ...settings, baseCurrency })} />
+        <Label>月度订阅预算</Label>
+        <Input keyboardType="decimal-pad" value={budget} onChangeText={setBudget} accessibilityLabel="月度订阅预算" />
+        <Label>默认物品闲置提醒天数</Label>
+        <Input keyboardType="number-pad" value={idleDays} onChangeText={setIdleDays} accessibilityLabel="默认物品闲置提醒天数" />
+        <View className="flex-row items-center justify-between rounded-2xl bg-slate-50 p-3 dark:bg-slate-800">
           <View>
-            <Text className="font-bold text-slate-900">本地通知</Text>
-            <Text className="text-sm text-slate-500">用于续费和闲置提醒</Text>
+            <Label className="text-base font-bold text-slate-900 dark:text-slate-100">本地通知</Label>
+            <AppText className="text-sm text-slate-500 dark:text-slate-400">用于续费和闲置提醒</AppText>
           </View>
-          <Switch value={settings.notificationEnabled} onValueChange={toggleNotifications} />
+          <Switch value={settings.notificationEnabled} onValueChange={toggleNotifications} accessibilityLabel="开启本地通知" />
         </View>
         <Button onPress={save}>保存设置</Button>
       </Card>
 
       <Card className="mb-4 gap-3">
-        <Text className="text-lg font-black text-slate-950">分类管理</Text>
-        <Input placeholder="分类名称，例如 AI 工具 / 厨房用品" value={categoryName} onChangeText={setCategoryName} />
-        <View className="flex-row gap-2">
-          <Button className="flex-1" size="sm" variant={categoryModule === 'subscription' ? 'default' : 'secondary'} onPress={() => setCategoryModule('subscription')}>订阅分类</Button>
-          <Button className="flex-1" size="sm" variant={categoryModule === 'item' ? 'default' : 'secondary'} onPress={() => setCategoryModule('item')}>物品分类</Button>
-        </View>
+        <Title>分类管理</Title>
+        <Input placeholder="分类名称，例如 AI 工具 / 厨房用品" value={categoryName} onChangeText={setCategoryName} accessibilityLabel="分类名称" />
+        <ChoiceGroup values={categoryModules} value={categoryModule} labels={categoryModuleLabels} onChange={setCategoryModule} />
         <View className="flex-row flex-wrap gap-2">
           {categoryColors.map((color) => (
-            <Button key={color} size="sm" variant={categoryColor === color ? 'default' : 'secondary'} onPress={() => setCategoryColor(color)}>
+            <Button key={color} size="sm" variant={categoryColor === color ? 'default' : 'secondary'} onPress={() => setCategoryColor(color)} accessibilityLabel={`选择分类颜色 ${color}`}>
               {color}
             </Button>
           ))}
@@ -128,16 +122,17 @@ export default function SettingsScreen() {
         <Button onPress={createCategory}>新增分类</Button>
         {(['subscription', 'item'] as const).map((module) => (
           <View key={module} className="gap-2">
-            <Text className="font-semibold text-slate-700">{module === 'subscription' ? '订阅分类' : '物品分类'}</Text>
+            <Label>{module === 'subscription' ? '订阅分类' : '物品分类'}</Label>
             {categories.filter((category) => category.module === module).map((category) => (
-              <View key={category.id} className="flex-row items-center justify-between rounded-2xl bg-slate-50 p-3">
+              <View key={category.id} className="flex-row items-center justify-between rounded-2xl bg-slate-50 p-3 dark:bg-slate-800">
                 <View className="flex-row items-center gap-2">
                   <View className="h-3 w-3 rounded-full" style={{ backgroundColor: category.color }} />
-                  <Text className="font-bold text-slate-900">{category.name}</Text>
+                  <Label className="text-base font-bold text-slate-900 dark:text-slate-100">{category.name}</Label>
                 </View>
                 <Button
                   size="sm"
                   variant="ghost"
+                  accessibilityLabel={`删除分类 ${category.name}`}
                   onPress={() => Alert.alert('删除分类', `删除 ${category.name} 后，关联数据会变为未分类。`, [
                     { text: '取消', style: 'cancel' },
                     { text: '删除', style: 'destructive', onPress: () => removeCategory(category.id) },
@@ -152,11 +147,11 @@ export default function SettingsScreen() {
       </Card>
 
       <Card className="gap-3">
-        <Text className="text-lg font-black text-slate-950">数据安全</Text>
-        <Text className="text-slate-500">数据保存在设备本地 SQLite。你可以导出 JSON 做备份，也可以从 JSON 合并恢复。</Text>
+        <Title>数据安全</Title>
+        <AppText className="text-slate-500 dark:text-slate-400">数据保存在设备本地 SQLite。你可以导出 JSON 做备份，也可以从 JSON 合并恢复。</AppText>
         <View className="flex-row gap-3">
-          <Button className="flex-1" variant="secondary" onPress={exportData}>导出</Button>
-          <Button className="flex-1" onPress={importData}>导入</Button>
+          <Button className="flex-1" variant="secondary" onPress={exportData} accessibilityLabel="导出 SubTrack JSON 备份">导出</Button>
+          <Button className="flex-1" onPress={importData} accessibilityLabel="导入 SubTrack JSON 备份">导入</Button>
         </View>
       </Card>
     </Screen>

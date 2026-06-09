@@ -1,10 +1,13 @@
 import { Tabs } from 'expo-router';
 import { BarChart3, Boxes, CreditCard, Settings } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabsLayout() {
   const { colorScheme } = useColorScheme();
+  const insets = useSafeAreaInsets();
   const isDark = colorScheme === 'dark';
+  const dockBottom = Math.max(14, insets.bottom + 8);
   return (
     <Tabs
       screenOptions={{
@@ -15,7 +18,7 @@ export default function TabsLayout() {
           position: 'absolute',
           left: 16,
           right: 16,
-          bottom: 14,
+          bottom: dockBottom,
           height: 64,
           paddingBottom: 8,
           paddingTop: 8,
@@ -35,10 +38,10 @@ export default function TabsLayout() {
         tabBarItemStyle: { borderRadius: 22, marginHorizontal: 4 },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: '概览', tabBarIcon: ({ color, size }) => <BarChart3 color={color} size={size} /> }} />
-      <Tabs.Screen name="subscriptions" options={{ title: '订阅', tabBarIcon: ({ color, size }) => <CreditCard color={color} size={size} /> }} />
-      <Tabs.Screen name="items" options={{ title: '物品', tabBarIcon: ({ color, size }) => <Boxes color={color} size={size} /> }} />
-      <Tabs.Screen name="settings" options={{ title: '设置', tabBarIcon: ({ color, size }) => <Settings color={color} size={size} /> }} />
+      <Tabs.Screen name="index" options={{ title: '概览', tabBarAccessibilityLabel: '打开概览页', tabBarIcon: ({ color, size }) => <BarChart3 color={color} size={size} /> }} />
+      <Tabs.Screen name="subscriptions" options={{ title: '订阅', tabBarAccessibilityLabel: '打开订阅页', tabBarIcon: ({ color, size }) => <CreditCard color={color} size={size} /> }} />
+      <Tabs.Screen name="items" options={{ title: '物品', tabBarAccessibilityLabel: '打开物品页', tabBarIcon: ({ color, size }) => <Boxes color={color} size={size} /> }} />
+      <Tabs.Screen name="settings" options={{ title: '设置', tabBarAccessibilityLabel: '打开设置页', tabBarIcon: ({ color, size }) => <Settings color={color} size={size} /> }} />
     </Tabs>
   );
 }

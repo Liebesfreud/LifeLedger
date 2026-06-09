@@ -32,7 +32,12 @@ export function Sheet({
               <Text className="text-2xl font-black text-slate-950 dark:text-slate-50">{title}</Text>
               {subtitle ? <Text className="mt-1 text-sm text-slate-500 dark:text-slate-400">{subtitle}</Text> : null}
             </View>
-            <Pressable className="h-10 w-10 items-center justify-center rounded-full bg-white dark:bg-slate-900" onPress={onClose}>
+            <Pressable
+              className="h-10 w-10 items-center justify-center rounded-full bg-white dark:bg-slate-900"
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="关闭弹窗"
+            >
               <X size={20} color={iconColor} />
             </Pressable>
           </View>
