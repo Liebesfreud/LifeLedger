@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "SubTrack",
-    "slug": "subtrack-mobile",
+    "name": "LifeLedger",
+    "slug": "lifeledger-mobile",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "subtrack",
+    "scheme": "lifeledger",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/splash.png",
@@ -16,7 +16,7 @@
       "**/*"
     ],
     "android": {
-      "package": "com.liebesfreud.subtrack",
+      "package": "com.liebesfreud.lifeledger",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#111827"

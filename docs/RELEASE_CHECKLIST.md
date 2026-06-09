@@ -19,7 +19,7 @@ git push origin main
 ## Release 建议
 
 - 当前版本：`0.1.0`。
-- Release 标题建议：`SubTrack 0.1.0`。
+- Release 标题建议：`LifeLedger 0.1.0`。
 - Release 说明建议包含：移动端能力、Android 优先、本地数据存储、验证命令和已知限制。
 
 ## 已知限制

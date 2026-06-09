@@ -1,6 +1,6 @@
 # Android 交付 QA
 
-本文记录 SubTrack Mobile 的 Android 交付验证范围、已通过证据和真机/模拟器复验步骤。
+本文记录 LifeLedger Mobile 的 Android 交付验证范围、已通过证据和真机/模拟器复验步骤。
 
 ## 已验证
 

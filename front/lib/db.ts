@@ -2,7 +2,7 @@ import * as SQLite from 'expo-sqlite';
 import type { Category, Item, ItemUsageLog, Subscription, SubscriptionRenewalLog, AppSettings } from '@/types/domain';
 import { createId, isISODate, nextBillingDate, todayISO } from '@/lib/utils';
 
-const DB_NAME = 'subtrack_mobile.db';
+const DB_NAME = 'lifeledger_mobile.db';
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
 const defaultSettings: AppSettings = {

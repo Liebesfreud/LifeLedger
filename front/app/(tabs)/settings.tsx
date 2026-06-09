@@ -57,9 +57,9 @@ export default function SettingsScreen() {
       const directory = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
       if (!directory) throw new Error('missing export directory');
       const snapshot = await exportSnapshot();
-      const path = `${directory}subtrack-export-${Date.now()}.json`;
+      const path = `${directory}lifeledger-export-${Date.now()}.json`;
       await FileSystem.writeAsStringAsync(path, JSON.stringify(snapshot, null, 2));
-      await Share.share({ url: path, title: 'SubTrack 数据备份', message: 'SubTrack 数据备份文件' });
+      await Share.share({ url: path, title: 'LifeLedger 数据备份', message: 'LifeLedger 数据备份文件' });
     } catch {
       Alert.alert('导出失败', '无法生成备份文件，请稍后再试。');
     }
@@ -76,7 +76,7 @@ export default function SettingsScreen() {
       await initialize();
       Alert.alert('导入完成', '数据已合并到本地数据库。');
     } catch {
-      Alert.alert('导入失败', '请选择由 SubTrack 导出的有效 JSON 文件。');
+      Alert.alert('导入失败', '请选择由 LifeLedger 导出的有效 JSON 文件。');
     }
   };
 
@@ -150,8 +150,8 @@ export default function SettingsScreen() {
         <Title>数据安全</Title>
         <AppText className="text-slate-500 dark:text-slate-400">数据保存在设备本地 SQLite。你可以导出 JSON 做备份，也可以从 JSON 合并恢复。</AppText>
         <View className="flex-row gap-3">
-          <Button className="flex-1" variant="secondary" onPress={exportData} accessibilityLabel="导出 SubTrack JSON 备份">导出</Button>
-          <Button className="flex-1" onPress={importData} accessibilityLabel="导入 SubTrack JSON 备份">导入</Button>
+          <Button className="flex-1" variant="secondary" onPress={exportData} accessibilityLabel="导出 LifeLedger JSON 备份">导出</Button>
+          <Button className="flex-1" onPress={importData} accessibilityLabel="导入 LifeLedger JSON 备份">导入</Button>
         </View>
       </Card>
     </Screen>

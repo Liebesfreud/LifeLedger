@@ -1,4 +1,4 @@
-# SubTrack → LongTermism App 重构计划
+# LifeLedger → LongTermism App 重构计划
 
 ## 1. 产品定位重构
 
@@ -295,7 +295,7 @@ CREATE TABLE notification_logs (
 ## 5. 项目结构（Expo）
 
 ```
-subtrack/
+lifeledger/
 ├── app/                          # Expo Router 页面
 │   ├── _layout.tsx               # 根布局（Tab 导航）
 │   ├── index.tsx                 # 首页仪表盘

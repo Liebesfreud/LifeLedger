@@ -1,6 +1,6 @@
-# SubTrack
+# LifeLedger
 
-SubTrack 是一个使用 **Expo + React Native** 构建的 Android 优先本地应用。它采用本地优先架构，核心功能是订阅管理与物品管理，并逐步扩展为长期主义生活管理工具。
+LifeLedger 是一个使用 **Expo + React Native** 构建的 Android 优先本地应用。它采用本地优先架构，核心功能是订阅管理与物品管理，并逐步扩展为长期主义生活管理工具。
 
 ## 当前移动端能力
 
