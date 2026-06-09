@@ -57,7 +57,6 @@ GitHub 发布前检查清单见 [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECK
 
 ```bash
 npm run build:android:preview
-npm run build:android:preview
 ```
 
 ## 目录
