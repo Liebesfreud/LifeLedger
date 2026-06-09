@@ -1,11 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, FlatList, Image, Text, View } from 'react-native';
+import { FlatList, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { ItemRow } from '@/components/item-row';
 import { Input } from '@/components/ui/input';
 import { ItemForm } from '@/components/entity-form';
-import { Pill } from '@/components/ui/screen';
 import { EmptyState, Sheet } from '@/components/ui/sheet';
 import { daysUntil, money } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
@@ -90,63 +90,23 @@ export default function ItemsScreen() {
     setIsFormOpen(false);
   }, []);
 
-  const renderItem = useCallback(({ item }: { item: Item }) => {
-    const reference = item.lastUsedAt || item.purchaseDate;
-    const idleDays = Math.abs(Math.min(daysUntil(reference), 0));
-    const costPerUse = item.usageCount > 0 ? item.purchasePrice / item.usageCount : item.purchasePrice;
-    const recentLogs = recentUsageText(item.id);
-    const isExpanded = expandedItemId === item.id;
-    const fullLogs = usageLogsByItem.get(item.id) ?? [];
-    return (
-      <Card className="mb-3">
-        {item.photoUri ? <Image source={{ uri: item.photoUri }} className="mb-3 h-40 w-full rounded-2xl bg-slate-100" resizeMode="cover" /> : null}
-        <View className="flex-row justify-between gap-4">
-          <View className="flex-1">
-            <Text className="text-xl font-black text-slate-950">{item.name}</Text>
-            <Text className="mt-1 text-slate-500">{categoryName(item.categoryId)} · {item.location} · {item.condition} · 使用 {item.usageCount} 次</Text>
-          </View>
-          <View className="items-end">
-            <Text className="text-lg font-black text-slate-950">{money(item.purchasePrice, item.currency)}</Text>
-            <Pill className={idleDays >= item.idleAlertDays ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700'}>
-              闲置 {idleDays} 天
-            </Pill>
-          </View>
-        </View>
-        <Text className="mt-3 text-sm text-slate-500">单次使用成本约 {money(costPerUse, item.currency)} · 上次使用 {item.lastUsedAt || '未记录'}</Text>
-        <Text className="mt-2 text-sm text-slate-400">保修截止：{item.warrantyUntil || '未记录'} · 序列号：{item.serialNumber || '未记录'}</Text>
-        {recentLogs ? <Text className="mt-2 text-sm text-emerald-600">最近使用：{recentLogs}</Text> : null}
-        {item.note ? <Text className="mt-2 text-sm text-slate-400">备注：{item.note}</Text> : null}
-        {isExpanded ? (
-          <View className="mt-4 rounded-2xl bg-slate-50 p-3">
-            <Text className="mb-2 font-black text-slate-900">完整使用历史</Text>
-            {fullLogs.length === 0 ? (
-              <Text className="text-sm text-slate-500">暂无使用记录。</Text>
-            ) : fullLogs.map((log) => (
-              <View key={log.id} className="mb-2 flex-row justify-between last:mb-0">
-                <Text className="text-sm font-semibold text-slate-700">{log.usedAt}</Text>
-                <Text className="text-sm text-emerald-600">+1 次</Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
-        <View className="mt-4 flex-row gap-2">
-          <Button size="sm" variant="secondary" onPress={() => markUsed(item)}>记录使用</Button>
-          <Button size="sm" variant="secondary" onPress={() => setExpandedItemId((value) => value === item.id ? undefined : item.id)}>{isExpanded ? '收起' : '详情'}</Button>
-          <Button size="sm" variant="secondary" onPress={() => openEditForm(item)}>编辑</Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            onPress={() => Alert.alert('删除物品', `确定删除 ${item.name}？`, [
-              { text: '取消', style: 'cancel' },
-              { text: '删除', style: 'destructive', onPress: () => removeItem(item.id) },
-            ])}
-          >
-            删除
-          </Button>
-        </View>
-      </Card>
-    );
-  }, [categoryName, expandedItemId, markUsed, openEditForm, recentUsageText, removeItem, usageLogsByItem]);
+  const toggleExpanded = useCallback((itemId: string) => {
+    setExpandedItemId((value) => value === itemId ? undefined : itemId);
+  }, []);
+
+  const renderItem = useCallback(({ item }: { item: Item }) => (
+    <ItemRow
+      item={item}
+      categoryName={categoryName(item.categoryId)}
+      recentUsageText={recentUsageText(item.id)}
+      fullLogs={usageLogsByItem.get(item.id) ?? []}
+      isExpanded={expandedItemId === item.id}
+      onToggleExpanded={toggleExpanded}
+      onEdit={openEditForm}
+      onMarkUsed={markUsed}
+      onRemove={removeItem}
+    />
+  ), [categoryName, expandedItemId, markUsed, openEditForm, recentUsageText, removeItem, toggleExpanded, usageLogsByItem]);
 
   const listHeader = useMemo(() => (
     <View>
