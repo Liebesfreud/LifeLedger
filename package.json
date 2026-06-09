@@ -1,0 +1,16 @@
+{
+  "name": "lifeledger",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "npm --prefix front run start",
+    "android": "npm --prefix front run android",
+    "web": "npm --prefix front run web",
+    "lint": "npm --prefix front run lint",
+    "typecheck": "npm --prefix front run typecheck",
+    "doctor": "npm --prefix front run doctor",
+    "validate": "npm --prefix front run validate",
+    "export:android": "npm --prefix front run export:android",
+    "build:android:preview": "npm --prefix front run build:android:preview"
+  }
+}
