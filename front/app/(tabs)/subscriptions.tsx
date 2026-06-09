@@ -152,7 +152,9 @@ export default function SubscriptionsScreen() {
         contentContainerClassName="px-5 pb-28 pt-4"
         initialNumToRender={8}
         maxToRenderPerBatch={8}
+        updateCellsBatchingPeriod={50}
         windowSize={7}
+        removeClippedSubviews
         ListHeaderComponent={listHeader}
         ListEmptyComponent={<EmptyState title="没有匹配的订阅" description="调整筛选条件，或点击右上角新增第一个长期扣款。" />}
       />

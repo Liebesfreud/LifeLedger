@@ -5,31 +5,48 @@ import { Card } from '@/components/ui/card';
 import { MetricCard } from '@/components/metric-card';
 import { InsightCard, ProgressBar } from '@/components/insight-card';
 import { Screen } from '@/components/ui/screen';
-import { daysUntil, money } from '@/lib/utils';
-import { selectDashboardData, useAppStore } from '@/store/app-store';
+import { annualCost, daysUntil, money, monthlyCost } from '@/lib/utils';
+import { useAppStore } from '@/store/app-store';
 
 export default function DashboardScreen() {
-  const state = useAppStore();
-  const data = selectDashboardData(state);
-  const budgetUsage = state.settings.monthlyBudget > 0 ? data.monthlySpend / state.settings.monthlyBudget * 100 : 0;
+  const subscriptions = useAppStore((state) => state.subscriptions);
+  const items = useAppStore((state) => state.items);
+  const itemUsageLogs = useAppStore((state) => state.itemUsageLogs);
+  const settings = useAppStore((state) => state.settings);
 
-  const dueSubscriptions = useMemo(() => state.subscriptions
+  const data = useMemo(() => {
+    const activeSubscriptions = subscriptions.filter((sub) => sub.status === 'active');
+    const monthlySpend = activeSubscriptions.reduce((sum, sub) => sum + monthlyCost(sub.price, sub.billingCycle), 0);
+    const annualSpend = activeSubscriptions.reduce((sum, sub) => sum + annualCost(sub.price, sub.billingCycle), 0);
+    const dueSoon = activeSubscriptions.filter((sub) => daysUntil(sub.nextPaymentDate) <= sub.notifyDaysBefore).length;
+    const idleItemCount = items.filter((item) => daysUntil(item.lastUsedAt || item.purchaseDate) < -item.idleAlertDays).length;
+    const itemValue = items.reduce((sum, item) => sum + item.purchasePrice, 0);
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const usedThisMonth = itemUsageLogs.filter((log) => log.usedAt.slice(0, 7) === currentMonth).length;
+    const longTermScore = Math.max(1, Math.min(99, Math.round(100 - monthlySpend / Math.max(settings.monthlyBudget, 1) * 35 - idleItemCount * 8 + Math.min(usedThisMonth, 12) * 2)));
+    return { monthlySpend, annualSpend, dueSoon, idleItems: idleItemCount, itemValue, usedThisMonth, longTermScore };
+  }, [itemUsageLogs, items, settings.monthlyBudget, subscriptions]);
+
+  const budgetUsage = settings.monthlyBudget > 0 ? data.monthlySpend / settings.monthlyBudget * 100 : 0;
+
+  const dueSubscriptions = useMemo(() => subscriptions
     .filter((sub) => sub.status === 'active')
     .sort((left, right) => daysUntil(left.nextPaymentDate) - daysUntil(right.nextPaymentDate))
-    .slice(0, 3), [state.subscriptions]);
+    .slice(0, 3), [subscriptions]);
 
-  const idleItems = useMemo(() => state.items
+  const idleItems = useMemo(() => items
     .map((item) => ({ item, idleDays: Math.abs(Math.min(daysUntil(item.lastUsedAt || item.purchaseDate), 0)) }))
     .sort((left, right) => right.idleDays - left.idleDays)
-    .slice(0, 3), [state.items]);
+    .slice(0, 3), [items]);
 
-  const recentUsageLogs = state.itemUsageLogs.slice(0, 4);
-  const itemName = (id: string) => state.items.find((item) => item.id === id)?.name ?? '未知物品';
+  const recentUsageLogs = useMemo(() => itemUsageLogs.slice(0, 4), [itemUsageLogs]);
+  const itemNameMap = useMemo(() => new Map(items.map((item) => [item.id, item.name])), [items]);
+  const itemName = (id: string) => itemNameMap.get(id) ?? '未知物品';
 
   const insights = useMemo(() => {
     const result: Array<{ title: string; description: string; action: string; tone: 'blue' | 'green' | 'amber' | 'rose'; route: '/subscriptions' | '/items' | '/settings' }> = [];
     if (budgetUsage >= 100) {
-      result.push({ title: '订阅预算已超额', description: `当前月化订阅约 ${money(data.monthlySpend)}，已经超过预算 ${money(state.settings.monthlyBudget)}。`, action: '检查订阅', tone: 'rose', route: '/subscriptions' });
+      result.push({ title: '订阅预算已超额', description: `当前月化订阅约 ${money(data.monthlySpend)}，已经超过预算 ${money(settings.monthlyBudget)}。`, action: '检查订阅', tone: 'rose', route: '/subscriptions' });
     } else if (budgetUsage >= 80) {
       result.push({ title: '订阅预算接近上限', description: `预算使用率 ${Math.round(budgetUsage)}%，建议确认近期是否有可暂停服务。`, action: '查看订阅', tone: 'amber', route: '/subscriptions' });
     }
@@ -43,7 +60,7 @@ export default function DashboardScreen() {
       result.push({ title: '状态健康', description: '订阅支出和物品使用都处在较稳定状态，继续记录真实使用。', action: '继续记录', tone: 'green', route: '/items' });
     }
     return result.slice(0, 3);
-  }, [budgetUsage, data.dueSoon, data.idleItems, data.monthlySpend, state.settings.monthlyBudget]);
+  }, [budgetUsage, data.dueSoon, data.idleItems, data.monthlySpend, settings.monthlyBudget]);
 
   return (
     <Screen title="长期生活仪表盘" subtitle="订阅支出、资产使用和长期主义指数一屏掌握">
@@ -59,20 +76,20 @@ export default function DashboardScreen() {
             <Text className="font-black text-white">{Math.round(budgetUsage)}%</Text>
           </View>
           <ProgressBar value={budgetUsage} tone={budgetUsage >= 100 ? 'rose' : budgetUsage >= 80 ? 'amber' : 'green'} />
-          <Text className="mt-2 text-xs text-slate-300">{money(data.monthlySpend)} / {money(state.settings.monthlyBudget)}</Text>
+          <Text className="mt-2 text-xs text-slate-300">{money(data.monthlySpend)} / {money(settings.monthlyBudget)}</Text>
         </View>
       </View>
 
       <View className="mb-4 flex-row flex-wrap gap-3">
-        <MetricCard title="本月订阅" value={money(data.monthlySpend)} caption={`预算 ${money(state.settings.monthlyBudget)}`} tone={budgetUsage >= 100 ? 'rose' : 'blue'} />
-        <MetricCard title="年度支出" value={money(data.annualSpend)} caption={`${state.subscriptions.length} 项订阅`} tone="amber" />
-        <MetricCard title="物品总值" value={money(data.itemValue)} caption={`${state.items.length} 件物品`} tone="green" />
+        <MetricCard title="本月订阅" value={money(data.monthlySpend)} caption={`预算 ${money(settings.monthlyBudget)}`} tone={budgetUsage >= 100 ? 'rose' : 'blue'} />
+        <MetricCard title="年度支出" value={money(data.annualSpend)} caption={`${subscriptions.length} 项订阅`} tone="amber" />
+        <MetricCard title="物品总值" value={money(data.itemValue)} caption={`${items.length} 件物品`} tone="green" />
         <MetricCard title="本月使用" value={`${data.usedThisMonth}`} caption="记录的真实使用" tone="green" />
         <MetricCard title="需关注" value={`${data.dueSoon + data.idleItems}`} caption="续费/闲置提醒" tone="rose" />
       </View>
 
       <View className="mb-1">
-        <Text className="mb-3 text-lg font-black text-slate-950">今日洞察</Text>
+        <Text className="mb-3 text-lg font-black text-slate-950 dark:text-slate-50 dark:text-slate-50">今日洞察</Text>
         {insights.map((insight) => (
           <InsightCard
             key={insight.title}
@@ -88,18 +105,18 @@ export default function DashboardScreen() {
       <Pressable onPress={() => router.push('/subscriptions')} className="active:opacity-80">
         <Card className="mb-4">
           <View className="mb-3 flex-row items-center justify-between">
-            <Text className="text-lg font-black text-slate-950">即将处理的订阅</Text>
+            <Text className="text-lg font-black text-slate-950 dark:text-slate-50 dark:text-slate-50">即将处理的订阅</Text>
             <Text className="text-sm font-bold text-blue-600">查看全部</Text>
           </View>
           {dueSubscriptions.length === 0 ? (
-            <Text className="text-slate-500">还没有订阅，去添加第一个长期支出。</Text>
+            <Text className="text-slate-500 dark:text-slate-400">还没有订阅，去添加第一个长期支出。</Text>
           ) : dueSubscriptions.map((sub) => (
             <View key={sub.id} className="mb-3 flex-row items-center justify-between last:mb-0">
               <View>
-                <Text className="font-bold text-slate-900">{sub.icon || '💳'} {sub.name}</Text>
-                <Text className="text-sm text-slate-500">{daysUntil(sub.nextPaymentDate)} 天后 · {sub.nextPaymentDate}</Text>
+                <Text className="font-bold text-slate-900 dark:text-slate-100">{sub.icon || '💳'} {sub.name}</Text>
+                <Text className="text-sm text-slate-500 dark:text-slate-400">{daysUntil(sub.nextPaymentDate)} 天后 · {sub.nextPaymentDate}</Text>
               </View>
-              <Text className="font-black text-slate-950">{money(sub.price, sub.currency)}</Text>
+              <Text className="font-black text-slate-950 dark:text-slate-50">{money(sub.price, sub.currency)}</Text>
             </View>
           ))}
         </Card>
@@ -108,18 +125,18 @@ export default function DashboardScreen() {
       <Pressable onPress={() => router.push('/items')} className="active:opacity-80">
         <Card className="mb-4">
           <View className="mb-3 flex-row items-center justify-between">
-            <Text className="text-lg font-black text-slate-950">闲置资产雷达</Text>
+            <Text className="text-lg font-black text-slate-950 dark:text-slate-50 dark:text-slate-50">闲置资产雷达</Text>
             <Text className="text-sm font-bold text-blue-600">查看全部</Text>
           </View>
           {idleItems.length === 0 ? (
-            <Text className="text-slate-500">目前没有明显闲置物品，继续保持。</Text>
+            <Text className="text-slate-500 dark:text-slate-400">目前没有明显闲置物品，继续保持。</Text>
           ) : idleItems.map(({ item, idleDays }) => (
             <View key={item.id} className="mb-3 flex-row items-center justify-between last:mb-0">
               <View>
-                <Text className="font-bold text-slate-900">{item.name}</Text>
-                <Text className="text-sm text-slate-500">{item.location} · 闲置 {idleDays} 天 · 已使用 {item.usageCount} 次</Text>
+                <Text className="font-bold text-slate-900 dark:text-slate-100">{item.name}</Text>
+                <Text className="text-sm text-slate-500 dark:text-slate-400">{item.location} · 闲置 {idleDays} 天 · 已使用 {item.usageCount} 次</Text>
               </View>
-              <Text className="font-black text-slate-950">{money(item.purchasePrice, item.currency)}</Text>
+              <Text className="font-black text-slate-950 dark:text-slate-50">{money(item.purchasePrice, item.currency)}</Text>
             </View>
           ))}
         </Card>
@@ -128,16 +145,16 @@ export default function DashboardScreen() {
       <Pressable onPress={() => router.push('/items')} className="active:opacity-80">
         <Card>
           <View className="mb-3 flex-row items-center justify-between">
-            <Text className="text-lg font-black text-slate-950">最近使用记录</Text>
+            <Text className="text-lg font-black text-slate-950 dark:text-slate-50 dark:text-slate-50">最近使用记录</Text>
             <Text className="text-sm font-bold text-blue-600">去记录</Text>
           </View>
           {recentUsageLogs.length === 0 ? (
-            <Text className="text-slate-500">还没有使用记录，去物品页点一次“记录使用”。</Text>
+            <Text className="text-slate-500 dark:text-slate-400">还没有使用记录，去物品页点一次“记录使用”。</Text>
           ) : recentUsageLogs.map((log) => (
             <View key={log.id} className="mb-3 flex-row items-center justify-between last:mb-0">
               <View>
-                <Text className="font-bold text-slate-900">{itemName(log.itemId)}</Text>
-                <Text className="text-sm text-slate-500">使用日期 {log.usedAt}</Text>
+                <Text className="font-bold text-slate-900 dark:text-slate-100">{itemName(log.itemId)}</Text>
+                <Text className="text-sm text-slate-500 dark:text-slate-400">使用日期 {log.usedAt}</Text>
               </View>
               <Text className="font-black text-emerald-600">+1</Text>
             </View>

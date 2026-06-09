@@ -15,7 +15,7 @@ const toneStyles: Record<Tone, { badge: string; text: string; dot: string }> = {
 export function ProgressBar({ value, tone = 'blue' }: { value: number; tone?: Tone }) {
   const clamped = Math.max(0, Math.min(100, value));
   return (
-    <View className="h-3 overflow-hidden rounded-full bg-slate-100">
+    <View className="h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
       <View className={cn('h-full rounded-full', toneStyles[tone].dot)} style={{ width: `${clamped}%` }} />
     </View>
   );
@@ -41,8 +41,8 @@ export function InsightCard({
         <View className="flex-row items-start gap-3">
           <View className={cn('mt-1 h-3 w-3 rounded-full', styles.dot)} />
           <View className="flex-1">
-            <Text className="text-base font-black text-slate-950">{title}</Text>
-            <Text className="mt-1 text-sm leading-5 text-slate-500">{description}</Text>
+            <Text className="text-base font-black text-slate-950 dark:text-slate-50">{title}</Text>
+            <Text className="mt-1 text-sm leading-5 text-slate-500 dark:text-slate-400">{description}</Text>
             <View className={cn('mt-3 self-start rounded-full px-3 py-1', styles.badge)}>
               <Text className={cn('text-xs font-bold', styles.text)}>{action}</Text>
             </View>

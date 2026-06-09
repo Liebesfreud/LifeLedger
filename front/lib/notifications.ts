@@ -4,6 +4,8 @@ import { Platform } from 'react-native';
 import type { AppSettings, Item, Subscription } from '@/types/domain';
 import { money } from '@/lib/utils';
 
+let lastReminderSignature = '';
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -13,6 +15,16 @@ Notifications.setNotificationHandler({
 });
 
 export async function syncLocalReminders(subscriptions: Subscription[], items: Item[], settings: AppSettings) {
+  const signature = JSON.stringify({
+    enabled: settings.notificationEnabled,
+    subscriptions: subscriptions
+      .filter((item) => item.status === 'active')
+      .map((item) => [item.id, item.name, item.price, item.currency, item.nextPaymentDate, item.notifyDaysBefore, item.status]),
+    items: items.map((item) => [item.id, item.name, item.purchaseDate, item.lastUsedAt, item.idleAlertDays, item.condition, item.warrantyUntil]),
+  });
+
+  if (signature === lastReminderSignature) return;
+
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('reminders', {
       name: '续费与闲置提醒',
@@ -23,6 +35,7 @@ export async function syncLocalReminders(subscriptions: Subscription[], items: I
   }
 
   await Notifications.cancelAllScheduledNotificationsAsync();
+  lastReminderSignature = signature;
   if (!settings.notificationEnabled) return;
 
   const permission = await Notifications.getPermissionsAsync();

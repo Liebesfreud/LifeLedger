@@ -128,6 +128,13 @@ export async function migrateDatabase() {
       key TEXT PRIMARY KEY NOT NULL,
       value TEXT NOT NULL
     );
+    CREATE INDEX IF NOT EXISTS idx_categories_module ON categories(module);
+    CREATE INDEX IF NOT EXISTS idx_subscriptions_next_payment ON subscriptions(nextPaymentDate);
+    CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
+    CREATE INDEX IF NOT EXISTS idx_subscription_logs_subscription ON subscription_renewal_logs(subscriptionId, paidAt DESC);
+    CREATE INDEX IF NOT EXISTS idx_items_purchase_date ON items(purchaseDate DESC);
+    CREATE INDEX IF NOT EXISTS idx_items_category ON items(categoryId);
+    CREATE INDEX IF NOT EXISTS idx_item_usage_logs_item ON item_usage_logs(itemId, usedAt DESC);
   `);
   await ensureColumn(db, 'subscriptions', 'status', "TEXT NOT NULL DEFAULT 'active'");
   await ensureColumn(db, 'subscriptions', 'paymentMethod', 'TEXT');
@@ -302,7 +309,13 @@ export async function saveItemUsageLog(log: ItemUsageLog) {
 export async function getSettings() {
   const db = await getDb();
   const rows = await db.getAllAsync<{ value: string }>('SELECT value FROM settings WHERE key = ?', ['app']);
-  return rows[0]?.value ? { ...defaultSettings, ...JSON.parse(rows[0].value) } as AppSettings : defaultSettings;
+  if (!rows[0]?.value) return defaultSettings;
+  try {
+    return { ...defaultSettings, ...JSON.parse(rows[0].value) } as AppSettings;
+  } catch {
+    await saveSettings(defaultSettings);
+    return defaultSettings;
+  }
 }
 
 export async function saveSettings(settings: AppSettings) {

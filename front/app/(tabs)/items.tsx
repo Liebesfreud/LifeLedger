@@ -184,7 +184,9 @@ export default function ItemsScreen() {
         contentContainerClassName="px-5 pb-28 pt-4"
         initialNumToRender={8}
         maxToRenderPerBatch={8}
+        updateCellsBatchingPeriod={50}
         windowSize={7}
+        removeClippedSubviews
         ListHeaderComponent={listHeader}
         ListEmptyComponent={<EmptyState title="没有匹配的物品" description="调整筛选条件，或点击右上角新增一件需要长期追踪的物品。" />}
       />
