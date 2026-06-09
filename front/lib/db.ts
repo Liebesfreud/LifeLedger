@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import type { Category, Item, ItemUsageLog, Subscription, SubscriptionRenewalLog, AppSettings } from '@/types/domain';
-import { createId, nextBillingDate, todayISO } from '@/lib/utils';
+import { createId, isISODate, nextBillingDate, todayISO } from '@/lib/utils';
 
 const DB_NAME = 'subtrack_mobile.db';
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -25,28 +25,72 @@ function isNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
+function isNonNegativeNumber(value: unknown): value is number {
+  return isNumber(value) && value >= 0;
+}
+
+function isPositiveInteger(value: unknown): value is number {
+  return Number.isInteger(value) && Number(value) > 0;
+}
+
+const currencies = new Set(['CNY', 'USD', 'EUR', 'GBP', 'JPY']);
+const billingCycles = new Set(['monthly', 'yearly', 'weekly', 'quarterly']);
+const subscriptionStatuses = new Set(['active', 'paused', 'cancelled']);
+const itemConditions = new Set(['new', 'good', 'used', 'idle', 'retired']);
+const themeModes = new Set(['system', 'light', 'dark']);
+
+function validOptionalDate(value: unknown) {
+  return value === undefined || value === null || value === '' || (typeof value === 'string' && isISODate(value));
+}
+
 function validCategory(value: unknown): value is Category {
   return isRecord(value) && isString(value.id) && isString(value.name) && isString(value.color) && (value.module === 'subscription' || value.module === 'item') && isString(value.createdAt);
 }
 
 function validSubscription(value: unknown): value is Subscription {
-  return isRecord(value) && isString(value.id) && isString(value.name) && isNumber(value.price) && isString(value.currency) && isString(value.billingCycle) && isString(value.nextPaymentDate) && isNumber(value.notifyDaysBefore) && typeof value.autoRenew === 'boolean' && isString(value.createdAt);
+  return isRecord(value)
+    && isString(value.id)
+    && isString(value.name)
+    && isNonNegativeNumber(value.price)
+    && currencies.has(String(value.currency))
+    && billingCycles.has(String(value.billingCycle))
+    && isString(value.nextPaymentDate)
+    && isISODate(value.nextPaymentDate)
+    && Number.isInteger(value.notifyDaysBefore)
+    && Number(value.notifyDaysBefore) >= 0
+    && typeof value.autoRenew === 'boolean'
+    && subscriptionStatuses.has(String(value.status ?? 'active'))
+    && isString(value.createdAt);
 }
 
 function validSubscriptionRenewalLog(value: unknown): value is SubscriptionRenewalLog {
-  return isRecord(value) && isString(value.id) && isString(value.subscriptionId) && isString(value.paidAt) && isNumber(value.amount) && isString(value.currency) && isString(value.nextPaymentDate) && isString(value.createdAt);
+  return isRecord(value) && isString(value.id) && isString(value.subscriptionId) && isString(value.paidAt) && isISODate(value.paidAt) && isNonNegativeNumber(value.amount) && currencies.has(String(value.currency)) && isString(value.nextPaymentDate) && isISODate(value.nextPaymentDate) && isString(value.createdAt);
 }
 
 function validItem(value: unknown): value is Item {
-  return isRecord(value) && isString(value.id) && isString(value.name) && isNumber(value.purchasePrice) && isString(value.currency) && isString(value.purchaseDate) && isString(value.location) && isString(value.condition) && isNumber(value.usageCount) && isNumber(value.idleAlertDays) && isString(value.createdAt);
+  return isRecord(value)
+    && isString(value.id)
+    && isString(value.name)
+    && isNonNegativeNumber(value.purchasePrice)
+    && currencies.has(String(value.currency))
+    && isString(value.purchaseDate)
+    && isISODate(value.purchaseDate)
+    && isString(value.location)
+    && itemConditions.has(String(value.condition))
+    && Number.isInteger(value.usageCount)
+    && Number(value.usageCount) >= 0
+    && isPositiveInteger(value.idleAlertDays)
+    && validOptionalDate(value.lastUsedAt)
+    && validOptionalDate(value.warrantyUntil)
+    && isString(value.createdAt);
 }
 
 function validItemUsageLog(value: unknown): value is ItemUsageLog {
-  return isRecord(value) && isString(value.id) && isString(value.itemId) && isString(value.usedAt) && isString(value.createdAt);
+  return isRecord(value) && isString(value.id) && isString(value.itemId) && isString(value.usedAt) && isISODate(value.usedAt) && isString(value.createdAt);
 }
 
 function validSettings(value: unknown): value is AppSettings {
-  return isRecord(value) && isString(value.baseCurrency) && isNumber(value.monthlyBudget) && isNumber(value.itemIdleAlertDays) && typeof value.notificationEnabled === 'boolean';
+  return isRecord(value) && currencies.has(String(value.baseCurrency)) && isNonNegativeNumber(value.monthlyBudget) && isPositiveInteger(value.itemIdleAlertDays) && typeof value.notificationEnabled === 'boolean' && themeModes.has(String(value.themeMode ?? 'system'));
 }
 
 function getDb() {
@@ -330,10 +374,13 @@ export async function exportSnapshot() {
 
 export async function importSnapshot(payload: { categories?: Category[]; subscriptions?: Subscription[]; subscriptionRenewalLogs?: SubscriptionRenewalLog[]; items?: Item[]; itemUsageLogs?: ItemUsageLog[]; settings?: AppSettings }) {
   if (!isRecord(payload)) throw new Error('Invalid snapshot');
-  if (Array.isArray(payload.categories)) for (const category of payload.categories.filter(validCategory)) await upsertCategory(category);
-  if (Array.isArray(payload.subscriptions)) for (const subscription of payload.subscriptions.filter(validSubscription)) await saveSubscription(subscription);
-  if (Array.isArray(payload.subscriptionRenewalLogs)) for (const log of payload.subscriptionRenewalLogs.filter(validSubscriptionRenewalLog)) await saveSubscriptionRenewalLog(log);
-  if (Array.isArray(payload.items)) for (const item of payload.items.filter(validItem)) await saveItem(item);
-  if (Array.isArray(payload.itemUsageLogs)) for (const log of payload.itemUsageLogs.filter(validItemUsageLog)) await saveItemUsageLog(log);
-  if (validSettings(payload.settings)) await saveSettings(payload.settings);
+  const db = await getDb();
+  await db.withTransactionAsync(async () => {
+    if (Array.isArray(payload.categories)) for (const category of payload.categories.filter(validCategory)) await upsertCategory(category);
+    if (Array.isArray(payload.subscriptions)) for (const subscription of payload.subscriptions.filter(validSubscription)) await saveSubscription({ ...subscription, status: subscription.status ?? 'active' });
+    if (Array.isArray(payload.subscriptionRenewalLogs)) for (const log of payload.subscriptionRenewalLogs.filter(validSubscriptionRenewalLog)) await saveSubscriptionRenewalLog(log);
+    if (Array.isArray(payload.items)) for (const item of payload.items.filter(validItem)) await saveItem(item);
+    if (Array.isArray(payload.itemUsageLogs)) for (const log of payload.itemUsageLogs.filter(validItemUsageLog)) await saveItemUsageLog(log);
+    if (validSettings(payload.settings)) await saveSettings({ ...defaultSettings, ...payload.settings });
+  });
 }
