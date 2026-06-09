@@ -53,6 +53,8 @@ npm run validate
 npm run export:android
 ```
 
+GitHub 发布前检查清单见 [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md)。
+
 生成 Android 预览 APK：
 
 ```bash
