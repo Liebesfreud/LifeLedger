@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, FlatList, Text, View } from 'react-native';
+import { FlatList, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Pill } from '@/components/ui/screen';
 import { EmptyState, Sheet } from '@/components/ui/sheet';
 import { SubscriptionForm } from '@/components/entity-form';
+import { confirmAction } from '@/lib/confirm-action';
 import { cycleLabel, daysUntil, money, monthlyCost } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
 import type { Subscription } from '@/types/domain';
@@ -105,10 +106,7 @@ export default function SubscriptionsScreen() {
           <Button
             size="sm"
             variant="destructive"
-            onPress={() => Alert.alert('删除订阅', `确定删除 ${sub.name}？`, [
-              { text: '取消', style: 'cancel' },
-              { text: '删除', style: 'destructive', onPress: () => removeSubscription(sub.id) },
-            ])}
+            onPress={() => confirmAction('删除订阅', `确定删除 ${sub.name}？`, () => removeSubscription(sub.id))}
           >
             删除
           </Button>

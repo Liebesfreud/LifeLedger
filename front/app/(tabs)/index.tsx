@@ -44,7 +44,7 @@ export default function DashboardScreen() {
   const itemName = (id: string) => itemNameMap.get(id) ?? '未知物品';
 
   const insights = useMemo(() => {
-    const result: Array<{ title: string; description: string; action: string; tone: 'blue' | 'green' | 'amber' | 'rose'; route: '/subscriptions' | '/items' | '/settings' }> = [];
+    const result: { title: string; description: string; action: string; tone: 'blue' | 'green' | 'amber' | 'rose'; route: '/subscriptions' | '/items' | '/settings' }[] = [];
     if (budgetUsage >= 100) {
       result.push({ title: '订阅预算已超额', description: `当前月化订阅约 ${money(data.monthlySpend)}，已经超过预算 ${money(settings.monthlyBudget)}。`, action: '检查订阅', tone: 'rose', route: '/subscriptions' });
     } else if (budgetUsage >= 80) {

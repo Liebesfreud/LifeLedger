@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { AppSettings, Category, Item, ItemUsageLog, Subscription, SubscriptionRenewalLog } from '@/types/domain';
-import { annualCost, createId, daysUntil, monthlyCost, todayISO } from '@/lib/utils';
+import { annualCost, createId, daysUntil, monthlyCost } from '@/lib/utils';
 import * as repo from '@/lib/db';
 import { syncLocalReminders } from '@/lib/notifications';
 

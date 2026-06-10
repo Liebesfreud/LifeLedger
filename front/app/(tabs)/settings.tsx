@@ -9,6 +9,7 @@ import { ChoiceGroup } from '@/components/ui/choice-group';
 import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { AppText, Label, Title } from '@/components/ui/typography';
+import { confirmAction } from '@/lib/confirm-action';
 import { exportSnapshot, importSnapshot } from '@/lib/db';
 import { useAppStore } from '@/store/app-store';
 import type { Category, Currency, ThemeMode } from '@/types/domain';
@@ -17,7 +18,7 @@ const currencies: Currency[] = ['CNY', 'USD', 'EUR', 'GBP', 'JPY'];
 const categoryColors = ['#2563EB', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444'];
 const themeModes: ThemeMode[] = ['system', 'light', 'dark'];
 const themeModeLabels: Record<ThemeMode, string> = { system: '跟随系统', light: '浅色', dark: '深色' };
-const categoryModules: Array<Category['module']> = ['subscription', 'item'];
+const categoryModules: Category['module'][] = ['subscription', 'item'];
 const categoryModuleLabels: Record<Category['module'], string> = { subscription: '订阅分类', item: '物品分类' };
 
 export default function SettingsScreen() {
@@ -133,10 +134,7 @@ export default function SettingsScreen() {
                   size="sm"
                   variant="ghost"
                   accessibilityLabel={`删除分类 ${category.name}`}
-                  onPress={() => Alert.alert('删除分类', `删除 ${category.name} 后，关联数据会变为未分类。`, [
-                    { text: '取消', style: 'cancel' },
-                    { text: '删除', style: 'destructive', onPress: () => removeCategory(category.id) },
-                  ])}
+                  onPress={() => confirmAction('删除分类', `删除 ${category.name} 后，关联数据会变为未分类。`, () => removeCategory(category.id))}
                 >
                   删除
                 </Button>

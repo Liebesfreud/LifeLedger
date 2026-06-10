@@ -1,8 +1,9 @@
 import { memo } from 'react';
-import { Alert, Image, Text, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Pill } from '@/components/ui/screen';
+import { confirmAction } from '@/lib/confirm-action';
 import { daysUntil, money } from '@/lib/utils';
 import type { Item, ItemUsageLog } from '@/types/domain';
 
@@ -70,10 +71,7 @@ function ItemRowComponent({
         <Button
           size="sm"
           variant="destructive"
-          onPress={() => Alert.alert('删除物品', `确定删除 ${item.name}？`, [
-            { text: '取消', style: 'cancel' },
-            { text: '删除', style: 'destructive', onPress: () => onRemove(item.id) },
-          ])}
+          onPress={() => confirmAction('删除物品', `确定删除 ${item.name}？`, () => onRemove(item.id))}
         >
           删除
         </Button>

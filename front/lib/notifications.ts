@@ -15,6 +15,8 @@ Notifications.setNotificationHandler({
 });
 
 export async function syncLocalReminders(subscriptions: Subscription[], items: Item[], settings: AppSettings) {
+  if (Platform.OS === 'web') return;
+
   const signature = JSON.stringify({
     enabled: settings.notificationEnabled,
     subscriptions: subscriptions
