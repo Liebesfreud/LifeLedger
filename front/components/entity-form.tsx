@@ -4,6 +4,7 @@ import { Alert, Image, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ChoiceGroup } from '@/components/ui/choice-group';
+import { Text } from '@/components/ui/text';
 import { Label, Title } from '@/components/ui/typography';
 import { isISODate, parseNonNegativeNumber, parsePositiveInteger } from '@/lib/utils';
 import type { BillingCycle, Category, Currency, Item, ItemCondition, Subscription, SubscriptionStatus } from '@/types/domain';
@@ -20,11 +21,11 @@ function CategoryChoice({ categories, value, onChange }: { categories: Category[
   return (
     <View className="flex-row flex-wrap gap-2">
       <Button size="sm" variant={!value ? 'default' : 'secondary'} onPress={() => onChange(undefined)}>
-        未分类
+        <Text>未分类</Text>
       </Button>
       {categories.map((category) => (
         <Button key={category.id} size="sm" variant={category.id === value ? 'default' : 'secondary'} onPress={() => onChange(category.id)}>
-          {category.name}
+          <Text>{category.name}</Text>
         </Button>
       ))}
     </View>
@@ -103,8 +104,8 @@ export function SubscriptionForm({
       <Input placeholder="下次付款日期 YYYY-MM-DD" value={nextPaymentDate} onChangeText={setNextPaymentDate} />
       <Input placeholder="提前提醒天数" keyboardType="number-pad" value={notifyDaysBefore} onChangeText={setNotifyDaysBefore} />
       <View className="flex-row gap-3">
-        {onCancel ? <Button className="flex-1" variant="secondary" onPress={onCancel}>取消</Button> : null}
-        <Button className="flex-1" onPress={submit}>{initialValue ? '保存修改' : '保存订阅'}</Button>
+        {onCancel ? <Button className="flex-1" variant="secondary" onPress={onCancel}><Text>取消</Text></Button> : null}
+        <Button className="flex-1" onPress={submit}><Text>{initialValue ? '保存修改' : '保存订阅'}</Text></Button>
       </View>
     </View>
   );
@@ -215,13 +216,13 @@ export function ItemForm({
       <Input placeholder="序列号/资产编号，可选" value={serialNumber} onChangeText={setSerialNumber} />
       {photoUri ? <Image source={{ uri: photoUri }} className="h-36 w-full rounded-2xl bg-slate-100" resizeMode="cover" /> : null}
       <View className="flex-row gap-3">
-        <Button className="flex-1" variant="secondary" onPress={pickPhoto}>{photoUri ? '更换照片' : '选择照片'}</Button>
-        {photoUri ? <Button className="flex-1" variant="ghost" onPress={() => setPhotoUri('')}>移除照片</Button> : null}
+        <Button className="flex-1" variant="secondary" onPress={pickPhoto}><Text>{photoUri ? '更换照片' : '选择照片'}</Text></Button>
+        {photoUri ? <Button className="flex-1" variant="ghost" onPress={() => setPhotoUri('')}><Text>移除照片</Text></Button> : null}
       </View>
       <Input placeholder="备注，例如保修期/序列号/购买理由" value={note} onChangeText={setNote} />
       <View className="flex-row gap-3">
-        {onCancel ? <Button className="flex-1" variant="secondary" onPress={onCancel}>取消</Button> : null}
-        <Button className="flex-1" onPress={submit}>{initialValue ? '保存修改' : '保存物品'}</Button>
+        {onCancel ? <Button className="flex-1" variant="secondary" onPress={onCancel}><Text>取消</Text></Button> : null}
+        <Button className="flex-1" onPress={submit}><Text>{initialValue ? '保存修改' : '保存物品'}</Text></Button>
       </View>
     </View>
   );

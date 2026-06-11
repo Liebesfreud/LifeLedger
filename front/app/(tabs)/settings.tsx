@@ -2,12 +2,14 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import * as Notifications from 'expo-notifications';
 import { useState } from 'react';
-import { Alert, Share, Switch, View } from 'react-native';
+import { Alert, Share, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ChoiceGroup } from '@/components/ui/choice-group';
 import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
+import { Text } from '@/components/ui/text';
+import { Switch } from '@/components/ui/switch';
 import { AppText, Label, Title } from '@/components/ui/typography';
 import { confirmAction } from '@/lib/confirm-action';
 import { exportSnapshot, importSnapshot } from '@/lib/db';
@@ -104,9 +106,9 @@ export default function SettingsScreen() {
             <Label className="text-base font-bold text-slate-900 dark:text-slate-100">本地通知</Label>
             <AppText className="text-sm text-slate-500 dark:text-slate-400">用于续费和闲置提醒</AppText>
           </View>
-          <Switch value={settings.notificationEnabled} onValueChange={toggleNotifications} accessibilityLabel="开启本地通知" />
+          <Switch checked={settings.notificationEnabled} onCheckedChange={toggleNotifications} accessibilityLabel="开启本地通知" />
         </View>
-        <Button onPress={save}>保存设置</Button>
+        <Button onPress={save}><Text>保存设置</Text></Button>
       </Card>
 
       <Card className="mb-4 gap-3">
@@ -116,11 +118,11 @@ export default function SettingsScreen() {
         <View className="flex-row flex-wrap gap-2">
           {categoryColors.map((color) => (
             <Button key={color} size="sm" variant={categoryColor === color ? 'default' : 'secondary'} onPress={() => setCategoryColor(color)} accessibilityLabel={`选择分类颜色 ${color}`}>
-              {color}
+              <Text>{color}</Text>
             </Button>
           ))}
         </View>
-        <Button onPress={createCategory}>新增分类</Button>
+        <Button onPress={createCategory}><Text>新增分类</Text></Button>
         {(['subscription', 'item'] as const).map((module) => (
           <View key={module} className="gap-2">
             <Label>{module === 'subscription' ? '订阅分类' : '物品分类'}</Label>
@@ -136,7 +138,7 @@ export default function SettingsScreen() {
                   accessibilityLabel={`删除分类 ${category.name}`}
                   onPress={() => confirmAction('删除分类', `删除 ${category.name} 后，关联数据会变为未分类。`, () => removeCategory(category.id))}
                 >
-                  删除
+                  <Text>删除</Text>
                 </Button>
               </View>
             ))}
@@ -148,8 +150,8 @@ export default function SettingsScreen() {
         <Title>数据安全</Title>
         <AppText className="text-slate-500 dark:text-slate-400">数据保存在设备本地 SQLite。你可以导出 JSON 做备份，也可以从 JSON 合并恢复。</AppText>
         <View className="flex-row gap-3">
-          <Button className="flex-1" variant="secondary" onPress={exportData} accessibilityLabel="导出 LifeLedger JSON 备份">导出</Button>
-          <Button className="flex-1" onPress={importData} accessibilityLabel="导入 LifeLedger JSON 备份">导入</Button>
+          <Button className="flex-1" variant="secondary" onPress={exportData} accessibilityLabel="导出 LifeLedger JSON 备份"><Text>导出</Text></Button>
+          <Button className="flex-1" onPress={importData} accessibilityLabel="导入 LifeLedger JSON 备份"><Text>导入</Text></Button>
         </View>
       </Card>
     </Screen>

@@ -5,6 +5,9 @@ import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
+import { PortalHost } from '@rn-primitives/portal';
+import { ThemeProvider } from '@react-navigation/native';
+import { NAV_THEME } from '@/lib/theme';
 import { useAppStore } from '@/store/app-store';
 
 export default function RootLayout() {
@@ -33,10 +36,13 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-      </Stack>
+      <ThemeProvider value={NAV_THEME[colorScheme === 'dark' ? 'dark' : 'light']}>
+        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+        </Stack>
+        <PortalHost />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

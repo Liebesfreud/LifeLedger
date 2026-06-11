@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { FlatList, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Pill } from '@/components/ui/screen';
 import { EmptyState, Sheet } from '@/components/ui/sheet';
+import { Text } from '@/components/ui/text';
 import { SubscriptionForm } from '@/components/entity-form';
 import { confirmAction } from '@/lib/confirm-action';
 import { cycleLabel, daysUntil, money, monthlyCost } from '@/lib/utils';
@@ -101,14 +102,14 @@ export default function SubscriptionsScreen() {
         <Text className="mt-3 text-sm text-slate-500">折算月支出 {money(monthlyCost(sub.price, sub.billingCycle), sub.currency)} · {sub.autoRenew ? '自动续费' : '手动确认'} · 提前 {sub.notifyDaysBefore} 天提醒</Text>
         <Text className="mt-2 text-sm text-slate-400">付款方式：{sub.paymentMethod || '未记录'}{recentRenewals ? ` · 最近续费 ${recentRenewals}` : ''}</Text>
         <View className="mt-4 flex-row gap-2">
-          <Button size="sm" variant="default" onPress={() => renewSubscription(sub)}>已续费</Button>
-          <Button size="sm" variant="secondary" onPress={() => openEditForm(sub)}>编辑</Button>
+          <Button size="sm" variant="default" onPress={() => renewSubscription(sub)}><Text>已续费</Text></Button>
+          <Button size="sm" variant="secondary" onPress={() => openEditForm(sub)}><Text>编辑</Text></Button>
           <Button
             size="sm"
             variant="destructive"
             onPress={() => confirmAction('删除订阅', `确定删除 ${sub.name}？`, () => removeSubscription(sub.id))}
           >
-            删除
+            <Text>删除</Text>
           </Button>
         </View>
       </Card>
@@ -123,16 +124,16 @@ export default function SubscriptionsScreen() {
             <Text className="text-3xl font-black text-slate-950">订阅管理</Text>
             <Text className="mt-1 text-base text-slate-500">筛选结果 {filteredSubscriptions.length} 项 · 月支出 {money(totalMonthly)}</Text>
           </View>
-          <Button size="sm" onPress={openCreateForm}>新增</Button>
+          <Button size="sm" onPress={openCreateForm}><Text>新增</Text></Button>
         </View>
       </View>
       <Card className="mb-4 gap-3">
         <Input placeholder="搜索订阅名称或备注" value={query} onChangeText={setQuery} />
         <View className="flex-row flex-wrap gap-2">
-          <Button size="sm" variant={!categoryFilter ? 'default' : 'secondary'} onPress={() => setCategoryFilter(undefined)}>全部</Button>
+          <Button size="sm" variant={!categoryFilter ? 'default' : 'secondary'} onPress={() => setCategoryFilter(undefined)}><Text>全部</Text></Button>
           {categories.map((category) => (
             <Button key={category.id} size="sm" variant={categoryFilter === category.id ? 'default' : 'secondary'} onPress={() => setCategoryFilter(category.id)}>
-              {category.name}
+              <Text>{category.name}</Text>
             </Button>
           ))}
         </View>

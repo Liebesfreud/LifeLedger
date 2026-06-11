@@ -1,4 +1,5 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '@/components/ui/text';
 import { cn } from '@/lib/utils';
 
 export function SectionHeader({ title, action, className }: { title: string; action?: React.ReactNode; className?: string }) {

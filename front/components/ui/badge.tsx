@@ -1,22 +1,66 @@
-import { Text, type TextProps } from 'react-native';
-import { cva, type VariantProps } from 'class-variance-authority';
+import { TextClassContext } from '@/components/ui/text';
 import { cn } from '@/lib/utils';
+import { Slot } from '@rn-primitives/slot';
+import { cva, type VariantProps } from 'class-variance-authority';
+import { Platform, View } from 'react-native';
 
-const badgeVariants = cva('overflow-hidden rounded-full px-3 py-1 text-xs font-bold', {
+const badgeVariants = cva(
+  cn(
+    'border-border group shrink-0 flex-row items-center justify-center gap-1 overflow-hidden rounded-full border px-2 py-0.5',
+    Platform.select({
+      web: 'focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive w-fit whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-[3px] [&>svg]:pointer-events-none [&>svg]:size-3',
+    })
+  ),
+  {
+    variants: {
+      variant: {
+        default: cn(
+          'bg-primary border-transparent',
+          Platform.select({ web: '[a&]:hover:bg-primary/90' })
+        ),
+        secondary: cn(
+          'bg-secondary border-transparent',
+          Platform.select({ web: '[a&]:hover:bg-secondary/90' })
+        ),
+        destructive: cn(
+          'bg-destructive border-transparent',
+          Platform.select({ web: '[a&]:hover:bg-destructive/90' })
+        ),
+        outline: Platform.select({ web: '[a&]:hover:bg-accent [a&]:hover:text-accent-foreground' }),
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
+    },
+  }
+);
+
+const badgeTextVariants = cva('text-xs font-medium', {
   variants: {
-    tone: {
-      slate: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-      blue: 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-200',
-      green: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200',
-      amber: 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-200',
-      rose: 'bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-200',
+    variant: {
+      default: 'text-primary-foreground',
+      secondary: 'text-secondary-foreground',
+      destructive: 'text-white',
+      outline: 'text-foreground',
     },
   },
-  defaultVariants: { tone: 'slate' },
+  defaultVariants: {
+    variant: 'default',
+  },
 });
 
-type BadgeProps = TextProps & VariantProps<typeof badgeVariants>;
+type BadgeProps = React.ComponentProps<typeof View> & React.RefAttributes<View> & {
+  asChild?: boolean;
+} & VariantProps<typeof badgeVariants>;
 
-export function Badge({ className, tone, ...props }: BadgeProps) {
-  return <Text className={cn(badgeVariants({ tone }), className)} {...props} />;
+function Badge({ className, variant, asChild, ...props }: BadgeProps) {
+  const Component = asChild ? Slot : View;
+  return (
+    <TextClassContext.Provider value={badgeTextVariants({ variant })}>
+      <Component className={cn(badgeVariants({ variant }), className)} {...props} />
+    </TextClassContext.Provider>
+  );
 }
+
+export { Badge, badgeTextVariants, badgeVariants };
+export type { BadgeProps };

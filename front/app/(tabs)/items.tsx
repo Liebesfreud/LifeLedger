@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { FlatList, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -7,6 +7,7 @@ import { ItemRow } from '@/components/item-row';
 import { Input } from '@/components/ui/input';
 import { ItemForm } from '@/components/entity-form';
 import { EmptyState, Sheet } from '@/components/ui/sheet';
+import { Text } from '@/components/ui/text';
 import { daysUntil, money } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
 import type { Item } from '@/types/domain';
@@ -116,19 +117,19 @@ export default function ItemsScreen() {
             <Text className="text-3xl font-black text-slate-950">物品管理</Text>
             <Text className="mt-1 text-base text-slate-500">筛选结果 {filteredItems.length} 件 · 总投入 {money(totalValue)}</Text>
           </View>
-          <Button size="sm" onPress={openCreateForm}>新增</Button>
+          <Button size="sm" onPress={openCreateForm}><Text>新增</Text></Button>
         </View>
       </View>
       <Card className="mb-4 gap-3">
         <Input placeholder="搜索物品、位置或备注" value={query} onChangeText={setQuery} />
         <View className="flex-row flex-wrap gap-2">
-          <Button size="sm" variant={!categoryFilter ? 'default' : 'secondary'} onPress={() => setCategoryFilter(undefined)}>全部</Button>
+          <Button size="sm" variant={!categoryFilter ? 'default' : 'secondary'} onPress={() => setCategoryFilter(undefined)}><Text>全部</Text></Button>
           {categories.map((category) => (
             <Button key={category.id} size="sm" variant={categoryFilter === category.id ? 'default' : 'secondary'} onPress={() => setCategoryFilter(category.id)}>
-              {category.name}
+              <Text>{category.name}</Text>
             </Button>
           ))}
-          <Button size="sm" variant={onlyIdle ? 'default' : 'secondary'} onPress={() => setOnlyIdle((value) => !value)}>只看闲置</Button>
+          <Button size="sm" variant={onlyIdle ? 'default' : 'secondary'} onPress={() => setOnlyIdle((value) => !value)}><Text>只看闲置</Text></Button>
         </View>
       </Card>
     </View>

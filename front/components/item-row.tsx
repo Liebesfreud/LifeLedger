@@ -1,8 +1,9 @@
 import { memo } from 'react';
-import { Image, Text, View } from 'react-native';
+import { Image, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Pill } from '@/components/ui/screen';
+import { Text } from '@/components/ui/text';
 import { confirmAction } from '@/lib/confirm-action';
 import { daysUntil, money } from '@/lib/utils';
 import type { Item, ItemUsageLog } from '@/types/domain';
@@ -65,15 +66,15 @@ function ItemRowComponent({
         </View>
       ) : null}
       <View className="mt-4 flex-row gap-2">
-        <Button size="sm" variant="secondary" onPress={() => onMarkUsed(item)}>记录使用</Button>
-        <Button size="sm" variant="secondary" onPress={() => onToggleExpanded(item.id)}>{isExpanded ? '收起' : '详情'}</Button>
-        <Button size="sm" variant="secondary" onPress={() => onEdit(item)}>编辑</Button>
+        <Button size="sm" variant="secondary" onPress={() => onMarkUsed(item)}><Text>记录使用</Text></Button>
+        <Button size="sm" variant="secondary" onPress={() => onToggleExpanded(item.id)}><Text>{isExpanded ? '收起' : '详情'}</Text></Button>
+        <Button size="sm" variant="secondary" onPress={() => onEdit(item)}><Text>编辑</Text></Button>
         <Button
           size="sm"
           variant="destructive"
           onPress={() => confirmAction('删除物品', `确定删除 ${item.name}？`, () => onRemove(item.id))}
         >
-          删除
+          <Text>删除</Text>
         </Button>
       </View>
     </Card>

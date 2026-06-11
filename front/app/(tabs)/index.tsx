@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { router } from 'expo-router';
 import { Card } from '@/components/ui/card';
 import { MetricCard } from '@/components/metric-card';
 import { InsightCard, ProgressBar } from '@/components/insight-card';
 import { Screen } from '@/components/ui/screen';
+import { Text } from '@/components/ui/text';
 import { annualCost, daysUntil, money, monthlyCost } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
 

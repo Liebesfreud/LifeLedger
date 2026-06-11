@@ -16,7 +16,7 @@ LifeLedger 是一个使用 **Expo + React Native** 构建的 Android 优先本�
 | --- | --- |
 | 移动端 | Expo + React Native + TypeScript |
 | 路由 | Expo Router |
-| UI | NativeWind + React Native Reusables 风格组件 |
+| UI | NativeWind + React Native Reusables 官方组件源码 |
 | 状态 | Zustand |
 | 数据库 | expo-sqlite |
 | 通知 | expo-notifications |

@@ -1,6 +1,7 @@
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 import { Card } from '@/components/ui/card';
+import { Text } from '@/components/ui/text';
 import { cn } from '@/lib/utils';
 
 type Tone = 'blue' | 'green' | 'amber' | 'rose';
